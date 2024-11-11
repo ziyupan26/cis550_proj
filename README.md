@@ -1,5 +1,5 @@
 # CIS 550 Project of GROUP 29 -- Recipe Finder
-## Contributors
+## Contributors (alphabetically)
 * [Amy Fang](https://github.com/AMYFYJ)
 * [Jiayi Jiang](https://github.com/JiangJiayi32)
 * [Houji Pan](https://github.com/houjipan)
