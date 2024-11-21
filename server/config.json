@@ -1,0 +1,9 @@
+{
+    "rds_host": "database-1.cihc71jwqdo7.us-east-1.rds.amazonaws.com",
+    "rds_port": "5432",
+    "rds_user": "Amy_postgresql",
+    "rds_password": "CIS55002024",
+    "rds_db": "project_db",
+    "server_host": "localhost",
+    "server_port": "8080"
+  }
