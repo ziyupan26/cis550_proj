@@ -100,15 +100,17 @@ const search_recipe = async function (req, res) {
   // Search recipe through ingredients, filter by cook time, prep time,
   // review rating, and show the recipe in order of descending rating, 
   // review count and submitted time
+  // test: http://localhost:8080/search_recipe?ingredients=egg
   const ingredients = req.query.ingredients ?? '';
-  const cooktimeLow = req.query.cooktime_low ?? 0;
+  const cooktimeLow = req.query.cooktime_low ?? 1;
   const cooktimeHigh = req.query.cooktime_high ?? 120;
-  const preptimeLow = req.query.preptime_low ?? 0;
+  const preptimeLow = req.query.preptime_low ?? 1;
   const preptimeHigh = req.query.preptime_high ?? 120;
   const ratingLow = req.query.avg_rate_low ?? 0;
   const ratingHigh = req.query.avg_rate_high ?? 5;
-  const caloriesLow = req.query.calories_low ?? 0;
+  const caloriesLow = req.query.calories_low ?? 1;
   const caloriesHigh = req.query.calories_high ?? 10000; 
+  const unwant = req.query.unwant ?? '';
 
   const queryParams = [];
   let query = `
@@ -145,7 +147,7 @@ const search_recipe = async function (req, res) {
     query += `AND preptime <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(preptimeHigh));
   }
-  if (ratingLow){
+  if (ratingLow !== null && ratingLow !== undefined){
     query += `AND a.avg_rate >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(ratingLow));
   }
@@ -161,8 +163,17 @@ const search_recipe = async function (req, res) {
     query += `AND calories <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(caloriesHigh));
   }
+  if (unwant){
+    query += `AND NOT EXISTS (
+        SELECT 1
+        FROM ingredients_matching im
+        WHERE im.ingredient = $${queryParams.length + 1}
+          AND rc.recipeingredientparts LIKE '%' || im.ingredient || '%'
+    )`;
+    queryParams.push(unwant);
+  }
 
-  query += `ORDER BY a.avg_rate DESC, a.review_count DESC, date DESC`;
+  query += `ORDER BY a.avg_rate DESC, a.review_count DESC, a.date DESC`;
 
   connection.query(query, queryParams, (err,data)=>{
     if (err) {
@@ -182,6 +193,7 @@ const search_recipe = async function (req, res) {
 const recipe = async function(req, res) {
   // Show a recipe (e.g. 10711), including its name, ingredients, nutritional
   // information, instructions, rating, 5 most recent reviews
+  // test: http://localhost:8080/recipe/10711
   connection.query(`
     WITH review_rank AS (
         SELECT reviewid, recipeid, authorid, authorname, review,
@@ -226,7 +238,7 @@ const recipe = async function(req, res) {
 const ingredient_info = async function(req, res) {
   // Show an ingredient (e.g. peanuts), including its energy per kcalcory,
   // protein per g, fat per g, carbon per g, fiber per mg, sugar per g, Vitamin (A, B6, B12, C, D2, E)
-
+  // test: http://localhost:8080/ingredient_info?ingredient=peanut
   connection.query(`
     SELECT im.ingredient AS name, im.descrip AS description, energykcal,
     proteing, fatg, carbg, fiberg, sugarg, vitcmg, vitb6mg, vitb12mcg,
