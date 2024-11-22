@@ -95,7 +95,162 @@ const random = async function(req, res) {
   }
 
 
-// Route 2: GET /
+// Route 2: GET /search_recipe
+const search_recipe = async function (req, res) {
+  // Search recipe through ingredients, filter by cook time, prep time,
+  // review rating, and show the recipe in order of descending rating, 
+  // review count and submitted time
+  const ingredients = req.query.ingredients ?? '';
+  const cooktimeLow = req.query.cooktime_low ?? 0;
+  const cooktimeHigh = req.query.cooktime_high ?? 120;
+  const preptimeLow = req.query.preptime_low ?? 0;
+  const preptimeHigh = req.query.preptime_high ?? 120;
+  const ratingLow = req.query.avg_rate_low ?? 0;
+  const ratingHigh = req.query.avg_rate_high ?? 5;
+  const caloriesLow = req.query.calories_low ?? 0;
+  const caloriesHigh = req.query.calories_high ?? 10000; 
+
+  const queryParams = [];
+  let query = `
+  WITH avg_rate AS (
+    SELECT recipeid, TO_CHAR(datesubmitted, 'YYYY-MM-DD') date, 
+    ROUND(AVG(rating),2) avg_rate, COUNT(review) review_count
+    FROM reviews
+    GROUP BY recipeid, datesubmitted
+  )
+  SELECT DISTINCT rc.name, rc.authorname, rc.description, rc.recipecategory,
+  a.avg_rate, a.review_count, date
+  FROM recipes rc
+  JOIN avg_rate a ON rc.recipeid = a.recipeid
+  WHERE 1=1
+  `;
+
+  if (ingredients){
+    query += `AND ingredients LIKE $${queryParams.length + 1}`;
+    queryParams.push(`%${ingredients}%`);
+  }
+  if (cooktimeLow){
+    query += `AND cooktime >= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(cooktimeLow));
+  }
+  if (cooktimeHigh){
+    query += `AND cooktime <= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(cooktimeHigh));
+  }
+  if (preptimeLow){
+    query += `AND preptime >= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(preptimeLow));
+  }
+  if (preptimeHigh){
+    query += `AND preptime <= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(preptimeHigh));
+  }
+  if (ratingLow){
+    query += `AND a.avg_rate >= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(ratingLow));
+  }
+  if (ratingHigh){
+    query += `AND a.avg_rate <= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(ratingHigh));
+  }
+  if (caloriesLow){
+    query += `AND calories >= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(caloriesLow));
+  }
+  if (caloriesHigh){
+    query += `AND calories <= $${queryParams.length + 1}`;
+    queryParams.push(parseFloat(caloriesHigh));
+  }
+
+  query += `ORDER BY a.avg_rate DESC, a.review_count DESC, date DESC`;
+
+  connection.query(query, queryParams, (err,data)=>{
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  })
+}
+
+/********************************
+ * BASIC recipe/ingredient INFO ROUTES *
+ ********************************/
+
+// ROUTE 3: GET /recipe/:recipeid
+const recipe = async function(req, res) {
+  // Show a recipe (e.g. 10711), including its name, ingredients, nutritional
+  // information, instructions, rating, 5 most recent reviews
+  connection.query(`
+    WITH review_rank AS (
+        SELECT reviewid, recipeid, authorid, authorname, review,
+        ROW_NUMBER() OVER (
+        PARTITION BY recipeid
+        ORDER BY datesubmitted DESC
+        ) as review_rank
+        FROM reviews
+        WHERE recipeid = $1
+    )
+    SELECT name, recipes.authorname, cooktime, preptime,
+    totaltime, recipecategory, ingredients, recipeinstructions,
+    calories, fatcontent, fibercontent, proteincontent, avg(rating)
+    avg_rate,
+    JSON_AGG(
+    JSON_BUILD_OBJECT(
+        'reviewer', rr.authorname,
+        'review', rr.review
+        )
+      ) FILTER (WHERE rr.review_rank <= 5) as recent_reviews
+    FROM recipes
+    JOIN review_rank rr ON rr.recipeid=recipes.recipeid
+    JOIN reviews rv ON rv.recipeid=recipes.recipeid
+    WHERE recipes.recipeid = $1
+    GROUP BY recipes.recipeid,name, recipes.authorname,
+    cooktime, preptime, totaltime, recipecategory,
+    ingredients, recipeinstructions,
+    calories, fatcontent, fibercontent, proteincontent
+    `,[req.params.recipeid]
+    , (err, data) => {
+      if (err){
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows[0]);
+      }
+    }
+  )
+}
+
+// ROUTE 4: GET /ingredient_info/:ingredient
+const ingredient_info = async function(req, res) {
+  // Show an ingredient (e.g. peanuts), including its energy per kcalcory,
+  // protein per g, fat per g, carbon per g, fiber per mg, sugar per g, Vitamin (A, B6, B12, C, D2, E)
+
+  connection.query(`
+    SELECT im.ingredient AS name, im.descrip AS description, energykcal,
+    proteing, fatg, carbg, fiberg, sugarg, vitcmg, vitb6mg, vitb12mcg,
+    vitamcg, vitemg, vitd2mcg
+    FROM ingredients_matching im
+    JOIN ingredients i ON i.ndbno = im.ndbno
+    WHERE im.ingredient = $1
+    `, 
+    [req.params.ingredient],
+    (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows[0]);
+    }
+  });
+}
+
+/********************************
+ * CATEGORY INFO ROUTES *
+ ********************************/
+
+// ROUTE 5: GET /
 
 
 
@@ -107,5 +262,8 @@ const random = async function(req, res) {
 
   // Export the functions
   module.exports = {
-    random
+    random,
+    search_recipe,
+    recipe,
+    ingredient_info
   }
