@@ -197,32 +197,29 @@ const recipe = async function(req, res) {
   // test: http://localhost:8080/recipe/10711
   connection.query(`
     WITH review_rank AS (
-        SELECT reviewid, recipeid, authorid, authorname, review,
-        ROW_NUMBER() OVER (
-        PARTITION BY recipeid
-        ORDER BY datesubmitted DESC
-        ) as review_rank
+        SELECT reviewid, recipeid, authorid, authorname, review, rating,
+            ROW_NUMBER() OVER (
+                PARTITION BY recipeid
+                ORDER BY datesubmitted DESC
+            ) AS review_rank
         FROM reviews
         WHERE recipeid = $1
     )
-    SELECT name, recipes.authorname, cooktime, preptime,
-    totaltime, recipecategory, ingredients, recipeinstructions,
-    calories, fatcontent, fibercontent, proteincontent, avg(rating)
-    avg_rate,
-    JSON_AGG(
-    JSON_BUILD_OBJECT(
-        'reviewer', rr.authorname,
-        'review', rr.review
-        )
-      ) FILTER (WHERE rr.review_rank <= 5) as recent_reviews
+    SELECT name, recipes.authorname, cooktime, preptime, totaltime, recipecategory,
+        ingredients, recipeinstructions, calories, fatcontent, fibercontent,
+        proteincontent, AVG(rr.rating) AS avg_rate,
+        JSON_AGG(
+            JSON_BUILD_OBJECT(
+                'reviewer', rr.authorname,
+                'review', rr.review
+            )
+        ) FILTER (WHERE rr.review_rank <= 5) AS recent_reviews
     FROM recipes
-    JOIN review_rank rr ON rr.recipeid=recipes.recipeid
-    JOIN reviews rv ON rv.recipeid=recipes.recipeid
+    LEFT JOIN review_rank rr ON rr.recipeid = recipes.recipeid
     WHERE recipes.recipeid = $1
-    GROUP BY recipes.recipeid,name, recipes.authorname,
-    cooktime, preptime, totaltime, recipecategory,
-    ingredients, recipeinstructions,
-    calories, fatcontent, fibercontent, proteincontent
+    GROUP BY recipes.recipeid, name, recipes.authorname, cooktime, preptime,
+        totaltime, recipecategory, ingredients, recipeinstructions, calories, fatcontent,
+        fibercontent, proteincontent
     `,[req.params.recipeid]
     , (err, data) => {
       if (err){
