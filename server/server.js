@@ -11,13 +11,12 @@ app.use(cors({
 // We use express to define our various API endpoints and
 // provide their handlers that we implemented in routes.js
 app.get('/random', routes.random);
-// app.get('/song/:song_id', routes.song);
-// app.get('/album/:album_id', routes.album);
-// app.get('/albums', routes.albums);
-// app.get('/album_songs/:album_id', routes.album_songs);
-// app.get('/top_songs', routes.top_songs);
-// app.get('/top_albums', routes.top_albums);
-// app.get('/search_songs', routes.search_songs);
+app.get('/search_recipe/?', routes.search_recipe) //??? currently not working
+app.get('/recipe/:recipeid', routes.recipe);
+app.get('/ingredient_info/:ingredient', routes.ingredient_info)
+app.get('/category_tops/:category', routes.category_tops);
+app.get('/category_info/:category', routes.category_info);
+
 
 app.listen(config.server_port, () => {
   console.log(`Server running at http://${config.server_host}:${config.server_port}/`)

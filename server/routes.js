@@ -23,6 +23,7 @@ connection.connect((err) => err && console.log(err));
  * HOMEPAGE ROUTES *
  ********************************/
 // Route 1: GET /random
+// Given the current month, return a random recipe that is related to the month
 const random = async function(req, res) {
 
     // create a dictionary to map month to related keyword list
@@ -109,7 +110,7 @@ const search_recipe = async function (req, res) {
   const ratingLow = req.query.avg_rate_low ?? 0;
   const ratingHigh = req.query.avg_rate_high ?? 5;
   const caloriesLow = req.query.calories_low ?? 1;
-  const caloriesHigh = req.query.calories_high ?? 10000; 
+  const caloriesHigh = req.query.calories_high ?? 10000;
   const unwant = req.query.unwant ?? '';
 
   const queryParams = [];
@@ -238,7 +239,8 @@ const recipe = async function(req, res) {
 const ingredient_info = async function(req, res) {
   // Show an ingredient (e.g. peanuts), including its energy per kcalcory,
   // protein per g, fat per g, carbon per g, fiber per mg, sugar per g, Vitamin (A, B6, B12, C, D2, E)
-  // test: http://localhost:8080/ingredient_info?ingredient=peanut
+  // test: http://localhost:8080/ingredient_info/pork
+  const ingredient = req.params.ingredient;
   connection.query(`
     SELECT im.ingredient AS name, im.descrip AS description, energykcal,
     proteing, fatg, carbg, fiberg, sugarg, vitcmg, vitb6mg, vitb12mcg,
@@ -247,7 +249,7 @@ const ingredient_info = async function(req, res) {
     JOIN ingredients i ON i.ndbno = im.ndbno
     WHERE im.ingredient = $1
     `, 
-    [req.params.ingredient],
+    [ingredient],
     (err, data) => {
     if (err) {
       console.log(err);
@@ -262,20 +264,156 @@ const ingredient_info = async function(req, res) {
  * CATEGORY INFO ROUTES *
  ********************************/
 
-// ROUTE 5: GET /
+// ROUTE 5: GET /category_tops/:category
+// Retrieve all the highest-rated recipes in one category along with its rating and 
+// review count for this category 
+// --> can be implemented as a side bar allowing users to click on a category and see
+// the highest-rated recipe for that category
+// URL: http://localhost:8080/categories/Apple
+const category_tops = async function(req, res) {
+  const userInput = req.params.category;
+  // pagination
+  const page = req.query.page;
+  const pageSize = req.query.page_size ? req.query.page_size : 10;
+
+  if (!page) {
+    connection.query(`
+      WITH category_ratings AS (
+        SELECT r.recipecategory, r.recipeID, CAST(AVG(re.rating) AS INT) AS AvgRating, COUNT(re.ReviewID) AS ReviewCount
+        FROM recipes r
+        JOIN reviews re ON r.recipeID = re.recipeID
+        GROUP BY r.recipecategory, r.recipeID
+      )
+      SELECT cr.recipecategory AS category, r.name AS RecipeName, cr.AvgRating, cr.ReviewCount
+      FROM category_ratings cr
+      JOIN recipes r ON cr.recipeID = r.recipeID
+      WHERE (cr.recipecategory, cr.AvgRating) IN (
+        SELECT recipecategory, MAX(AvgRating)
+        FROM category_ratings
+        GROUP BY recipecategory)
+      AND cr.recipecategory = $1
+      `, [userInput], (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows);
+      }
+    });
+  } else {
+    const offset = (page - 1) * pageSize;
+    connection.query(`
+      WITH category_ratings AS (
+        SELECT r.recipecategory, r.recipeID, CAST(AVG(re.rating) AS INT) AS AvgRating, COUNT(re.ReviewID) AS ReviewCount
+        FROM recipes r
+        JOIN reviews re ON r.recipeID = re.recipeID
+        GROUP BY r.recipecategory, r.recipeID
+      )
+      SELECT cr.recipecategory AS category, r.name AS RecipeName, cr.AvgRating, cr.ReviewCount
+      FROM category_ratings cr
+      JOIN recipes r ON cr.recipeID = r.recipeID
+      WHERE (cr.recipecategory, cr.AvgRating) IN (
+        SELECT recipecategory, MAX(AvgRating)
+        FROM category_ratings
+        GROUP BY recipecategory)
+      AND cr.recipecategory = $1
+      LIMIT ${pageSize}
+      OFFSET ${offset}
+      `, [userInput], (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows);
+      }
+    });
+  }
+}
 
 
 
+// ROUTE 6: GET /category_info/:category
+// CATEGORY INFO: Display the recipes for each category in the order of 
+// descending rating (like AlbumInfo page)
+// URL: http://localhost:8080/category_info/Asian
 
+const category_info = async function(req, res) {
+  // pagination
+  const page = req.query.page;
+  const pageSize = req.query.page_size ? req.query.page_size : 10;
+  const inputCategory = req.params.category;
 
+  if(!page) {
+    connection.query(`
+      WITH category_ratings AS (
+        SELECT
+            r.recipecategory,
+            r.recipeID,
+            r.name AS RecipeName,
+            ROUND(AVG(re.rating), 2) AS AvgRating,
+            COUNT(re.ReviewID) AS ReviewCount
+        FROM recipes r
+        JOIN reviews re ON r.recipeID = re.recipeID
+        GROUP BY r.recipecategory, r.recipeID, r.name
+      )
+      SELECT
+        cr.recipecategory,
+        cr.RecipeName,
+        cr.AvgRating,
+        cr.ReviewCount
+      FROM category_ratings cr
+      WHERE cr.recipecategory = $1
+      ORDER BY cr.AvgRating DESC, cr.ReviewCount DESC
+      `, [inputCategory], (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows);
+      }
+    });
+  } else {
+    const offset = (page - 1) * pageSize;
+    connection.query(`
+      WITH category_ratings AS (
+        SELECT
+            r.recipecategory,
+            r.recipeID,
+            r.name AS RecipeName,
+            AVG(re.rating) AS AvgRating,
+            COUNT(re.ReviewID) AS ReviewCount
+        FROM recipes r
+        JOIN reviews re ON r.recipeID = re.recipeID
+        GROUP BY r.recipecategory, r.recipeID, r.name
+      )
+      SELECT
+        cr.recipecategory,
+        cr.RecipeName,
+        cr.AvgRating,
+        cr.ReviewCount
+      FROM category_ratings cr
+      WHERE cr.recipecategory = $1
+      ORDER BY cr.AvgRating DESC, cr.ReviewCount DESC
+      LIMIT ${pageSize}
+      OFFSET ${offset};
+      `, [inputCategory], (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows);
+      }
+    });  
+  }
 
-
-
+}
 
   // Export the functions
   module.exports = {
     random,
     search_recipe,
     recipe,
-    ingredient_info
+    ingredient_info,
+    category_tops,
+    category_info
   }
