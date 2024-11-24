@@ -402,8 +402,218 @@ const category_info = async function(req, res) {
       }
     });  
   }
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/********************************
+ * RECOMMENDATION ROUTES *
+ ********************************/
+
+// Route 13: GET /healthy_recipe
+const healthy_recipe = async function(req, res) {
+  // calculates a "health score" for each recipe based on its nutritional content 
+  // and recent average rating, displaying recipes in order of this score.
+  // test: http://localhost:8080/healthy_recipe
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10; // The query parameter names match what's being sent from the frontend (page_size instead of pageSize)
+
+  if (!page){
+    connection.query(
+      `WITH monthly_ratings AS (
+        SELECT
+            r.recipeid,
+            DATE_TRUNC('month', rv.datesubmitted) as month,
+            AVG(rv.rating) as avg_rating,
+            COUNT(*) as review_count,
+            ROW_NUMBER() OVER (PARTITION BY r.recipeid ORDER BY DATE_TRUNC('month', rv.datesubmitted) DESC) as month_rank
+        FROM recipes r
+                  JOIN reviews rv ON r.recipeid = rv.recipeid
+        GROUP BY r.recipeid, DATE_TRUNC('month', rv.datesubmitted)
+      ),
+          recipe_ingredients_expanded AS (
+              SELECT DISTINCT
+                  r.recipeid,
+                  TRIM(BOTH '[] ' FROM
+                      REGEXP_REPLACE(
+                              REGEXP_REPLACE(
+                                      ingredient,
+                                      '''|"',
+                                      '',
+                                      'g'
+                              ),
+                              '^\[|\]$',                         '',
+                              'g'
+                      )
+                  ) as clean_ingredient
+              FROM recipes r
+                      CROSS JOIN LATERAL unnest(string_to_array(
+                      TRIM(BOTH '[] ' FROM
+                          REGEXP_REPLACE(
+                                  REGEXP_REPLACE(
+                                          r.ingredients,
+                                          '''|"',
+                                          '',
+                                          'g'
+                                  ),
+                                  '\s*,\s*',
+                                  ',',
+                                  'g'
+                          )
+                      ),
+                      ','
+                                                )) as ingredient
+          ),
+          recipe_nutrition AS (
+              SELECT
+                  r.recipeid,
+                  r.name,
+                  r.authorid,
+                  r.authorname,
+                  SUM(i.proteing) as total_protein,
+                  SUM(i.fiberg) as total_fiber,
+                  SUM(i.sugarg) as total_sugar,
+                  SUM(i.vitcmg) as total_vitc,
+                  SUM(i.vitb12mcg) as total_vitb12
+              FROM recipes r
+                      JOIN recipe_ingredients_expanded rie ON r.recipeid = rie.recipeid
+                      JOIN ingredients_matching im ON im.ingredient = rie.clean_ingredient
+                      JOIN ingredients i ON i.ndbno = im.ndbno
+              GROUP BY r.recipeid, r.name, r.authorid, r.authorname
+          )
+      SELECT
+        rn.recipeid,
+        rn.name,
+        rn.authorname,
+        mr.avg_rating,
+        mr.review_count,
+        rn.total_protein,
+        rn.total_fiber,
+        (rn.total_protein * 4 + rn.total_fiber * 2.5 + rn.total_vitc * 0.1 + rn.total_vitb12 * 0.1 - rn.total_sugar * 1.5) /
+        NULLIF(mr.review_count, 0) as health_score
+      FROM recipe_nutrition rn
+              JOIN monthly_ratings mr ON rn.recipeid = mr.recipeid
+      WHERE mr.month_rank = 1
+      AND mr.review_count >= 5
+      ORDER BY health_score DESC, mr.avg_rating DESC
+      `, 
+      (err, data) => {
+        if (err) {
+          console.log(err);
+          res.json({})
+        } else {
+          res.json(data.rows)
+        }
+      }
+    )
+  } else {
+    const offset = (page - 1) * pageSize
+    connection.query(
+      `WITH monthly_ratings AS (
+        SELECT
+            r.recipeid,
+            DATE_TRUNC('month', rv.datesubmitted) as month,
+            AVG(rv.rating) as avg_rating,
+            COUNT(*) as review_count,
+            ROW_NUMBER() OVER (PARTITION BY r.recipeid ORDER BY DATE_TRUNC('month', rv.datesubmitted) DESC) as month_rank
+        FROM recipes r
+                  JOIN reviews rv ON r.recipeid = rv.recipeid
+        GROUP BY r.recipeid, DATE_TRUNC('month', rv.datesubmitted)
+      ),
+          recipe_ingredients_expanded AS (
+              SELECT DISTINCT
+                  r.recipeid,
+                  TRIM(BOTH '[] ' FROM
+                      REGEXP_REPLACE(
+                              REGEXP_REPLACE(
+                                      ingredient,
+                                      '''|"',
+                                      '',
+                                      'g'
+                              ),
+                              '^\[|\]$',                         '',
+                              'g'
+                      )
+                  ) as clean_ingredient
+              FROM recipes r
+                      CROSS JOIN LATERAL unnest(string_to_array(
+                      TRIM(BOTH '[] ' FROM
+                          REGEXP_REPLACE(
+                                  REGEXP_REPLACE(
+                                          r.ingredients,
+                                          '''|"',
+                                          '',
+                                          'g'
+                                  ),
+                                  '\s*,\s*',
+                                  ',',
+                                  'g'
+                          )
+                      ),
+                      ','
+                                                )) as ingredient
+          ),
+          recipe_nutrition AS (
+              SELECT
+                  r.recipeid,
+                  r.name,
+                  r.authorid,
+                  r.authorname,
+                  SUM(i.proteing) as total_protein,
+                  SUM(i.fiberg) as total_fiber,
+                  SUM(i.sugarg) as total_sugar,
+                  SUM(i.vitcmg) as total_vitc,
+                  SUM(i.vitb12mcg) as total_vitb12
+              FROM recipes r
+                      JOIN recipe_ingredients_expanded rie ON r.recipeid = rie.recipeid
+                      JOIN ingredients_matching im ON im.ingredient = rie.clean_ingredient
+                      JOIN ingredients i ON i.ndbno = im.ndbno
+              GROUP BY r.recipeid, r.name, r.authorid, r.authorname
+          )
+      SELECT
+        rn.recipeid,
+        rn.name,
+        rn.authorname,
+        mr.avg_rating,
+        mr.review_count,
+        rn.total_protein,
+        rn.total_fiber,
+        (rn.total_protein * 4 + rn.total_fiber * 2.5 + rn.total_vitc * 0.1 + rn.total_vitb12 * 0.1 - rn.total_sugar * 1.5) /
+        NULLIF(mr.review_count, 0) as health_score
+      FROM recipe_nutrition rn
+              JOIN monthly_ratings mr ON rn.recipeid = mr.recipeid
+      WHERE mr.month_rank = 1
+      AND mr.review_count >= 5
+      ORDER BY health_score DESC, mr.avg_rating DESC
+      LIMIT $1 OFFSET $2
+      `, [pageSize, offset]
+      , (err, data) => {
+        if (err) {
+          console.log(err)
+          res.json({})
+        } else {
+          res.json(data.rows)
+        }
+      }
+    )
+  }
+}
+
 
   // Export the functions
   module.exports = {
