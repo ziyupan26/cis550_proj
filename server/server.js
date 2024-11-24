@@ -16,7 +16,9 @@ app.get('/recipe/:recipeid', routes.recipe);
 app.get('/ingredient_info/:ingredient', routes.ingredient_info)
 app.get('/category_tops/:category', routes.category_tops);
 app.get('/category_info/:category', routes.category_info);
-
+app.get('/top_contributors', routes.getTopContributors);
+app.get('/healthy_recipes', routes.getHealthyRecipes);
+app.get('/nutrition_guide', routes.getNutritionGuide);
 app.get('/preparation_time', routes.preparation_time);
 app.get('/calculate_nutrition/:nutritionType', routes.calculate_nutrition);
 app.get('/seasonal_recipe', routes.seasonal_recipe);
