@@ -655,15 +655,13 @@ const calculate_nutrition = async function(req, res) {
 
   // Export the functions
   module.exports = {
-    random,
-    search_recipe,
-    recipe,
-    ingredient_info,
-    category_tops,
-    category_info, 
-
-
-
-
-    healthy_recipe
+    	random,
+    	search_recipe,
+    	recipe,
+    	ingredient_info,
+    	category_tops,
+    	category_info, 
+	preparation_time,
+	calculate_nutrition,
+	seasonal_recipe
   }
