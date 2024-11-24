@@ -492,10 +492,196 @@ const allergen_elimination = async function(req, res) {
 }
 
 
+// Route 9: GET /contributors_list
+ const contributors_list = async function(req, res) {
+   //  create a leaderboard to show users who have contributed the highest rated recipes
+   // test: http://localhost:8080/contributors_list
+   const page = req.query.page;
+   const pageSize = req.query.page_size ?? 10; // The query parameter names match what's being sent from the frontend (page_size instead of pageSize)
+ 
+   if (!page){
+     connection.query(
+       `WITH avg_recipe_rating AS (
+		   SELECT r.authorid, r.authorname, ROUND(AVG(rv.rating), 2) AS avg_rating, COUNT(rv.reviewid) AS review_count
+		   FROM recipes r
+		   JOIN reviews rv ON r.recipeid = rv.recipeid
+		   GROUP BY r.authorid, r.authorname
+		)
+		SELECT u.authorid, ar.authorname, ar.avg_rating, ar.review_count
+		FROM users u
+		JOIN avg_recipe_rating ar ON u.authorid = ar.authorid
+		ORDER BY ar.avg_rating DESC, ar.review_count DESC
+		limit 20
+			   `, 
+       (err, data) => {
+         if (err) {
+           console.log(err);
+           res.json({})
+         } else {
+           res.json(data.rows)
+         }
+       }
+     )
+   } else {
+     const offset = (page - 1) * pageSize
+     connection.query(
+       `WITH avg_recipe_rating AS (
+		   SELECT r.authorid, r.authorname, ROUND(AVG(rv.rating), 2) AS avg_rating, COUNT(rv.reviewid) AS review_count
+		   FROM recipes r
+		   JOIN reviews rv ON r.recipeid = rv.recipeid
+		   GROUP BY r.authorid, r.authorname
+		)
+		SELECT u.authorid, ar.authorname, ar.avg_rating, ar.review_count
+		FROM users u
+		JOIN avg_recipe_rating ar ON u.authorid = ar.authorid
+		ORDER BY ar.avg_rating DESC, ar.review_count DESC
+       LIMIT $1 OFFSET $2
+       `, [pageSize, offset]
+       , (err, data) => {
+         if (err) {
+           console.log(err)
+           res.json({})
+         } else {
+           res.json(data.rows)
+         }
+       }
+     )
+   }
+ }
 
 
+// Route 12: GET /nutrition_guide
+ const nutrition_guide = async function(req, res) {
+   //  create recipe lists such as Trending recipes, High-Fiber diet list, Low-Calorie diet list, and High-Protein diet list.
+   // test: http://localhost:8080/nutrition_guide
+   const page = req.query.page;
+   const pageSize = req.query.page_size ?? 10; // The query parameter names match what's being sent from the frontend (page_size instead of pageSize)
+ 
+   if (!page){
+     connection.query(
+       `SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating, 'Trending' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   WHERE re.datesubmitted >= NOW() - INTERVAL '3 months'
+		   GROUP BY re.recipeid
+		   HAVING COUNT(re.reviewid) > 10 AND AVG(re.rating) >= 4.0  
+		) recent ON r.recipeid = recent.recipeid
+		WHERE r.calories <= 600
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
 
+		UNION
 
+		SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, overall.recent_reviews, overall.avg_rating, 'High-Fiber' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   GROUP BY re.recipeid
+		) overall ON r.recipeid = overall.recipeid
+		WHERE r.fibercontent >= 8 AND r.calories <= 500
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
+
+		UNION
+
+		SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, overall.recent_reviews, overall.avg_rating, 'Low-Calorie' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   GROUP BY re.recipeid
+		) overall ON r.recipeid = overall.recipeid
+		WHERE r.calories <= 300
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
+
+		UNION
+
+		SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, overall.recent_reviews, overall.avg_rating, 'High-Protein' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   GROUP BY re.recipeid
+		) overall ON r.recipeid = overall.recipeid
+		WHERE r.proteincontent >= 15 AND r.fatcontent <= 10
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
+		ORDER BY category, avg_rating DESC, recent_reviews DESC
+		limit 20
+			   `, 
+       (err, data) => {
+         if (err) {
+           console.log(err);
+           res.json({})
+         } else {
+           res.json(data.rows)
+         }
+       }
+     )
+   } else {
+     const offset = (page - 1) * pageSize
+     connection.query(
+       `SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating, 'Trending' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   WHERE re.datesubmitted >= NOW() - INTERVAL '3 months'
+		   GROUP BY re.recipeid
+		   HAVING COUNT(re.reviewid) > 10 AND AVG(re.rating) >= 4.0  
+		) recent ON r.recipeid = recent.recipeid
+		WHERE r.calories <= 600
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
+
+		UNION
+
+		SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, overall.recent_reviews, overall.avg_rating, 'High-Fiber' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   GROUP BY re.recipeid
+		) overall ON r.recipeid = overall.recipeid
+		WHERE r.fibercontent >= 8 AND r.calories <= 500
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
+
+		UNION
+
+		SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, overall.recent_reviews, overall.avg_rating, 'Low-Calorie' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   GROUP BY re.recipeid
+		) overall ON r.recipeid = overall.recipeid
+		WHERE r.calories <= 300
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
+
+		UNION
+
+		SELECT r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, overall.recent_reviews, overall.avg_rating, 'High-Protein' AS category
+		FROM recipes r
+				JOIN (
+		   SELECT re.recipeid, COUNT(re.reviewid) AS recent_reviews, AVG(re.rating) AS avg_rating
+		   FROM reviews re
+		   GROUP BY re.recipeid
+		) overall ON r.recipeid = overall.recipeid
+		WHERE r.proteincontent >= 15 AND r.fatcontent <= 10
+		GROUP BY r.recipeid, r.name, r.calories, r.fibercontent, r.proteincontent, r.fatcontent, recent_reviews, avg_rating
+		ORDER BY category, avg_rating DESC, recent_reviews DESC
+       LIMIT $1 OFFSET $2
+       `, [pageSize, offset]
+       , (err, data) => {
+         if (err) {
+           console.log(err)
+           res.json({})
+         } else {
+           res.json(data.rows)
+         }
+       }
+     )
+   }
+ }
 
 
 
