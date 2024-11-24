@@ -18,6 +18,9 @@ app.get('/category_tops/:category', routes.category_tops);
 app.get('/category_info/:category', routes.category_info);
 
 
+
+app.get('/healthy_recipe', routes.healthy_recipe);
+
 app.listen(config.server_port, () => {
   console.log(`Server running at http://${config.server_host}:${config.server_port}/`)
 });
