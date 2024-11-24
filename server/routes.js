@@ -511,6 +511,7 @@ const healthy_recipe = async function(req, res) {
       WHERE mr.month_rank = 1
       AND mr.review_count >= 5
       ORDER BY health_score DESC, mr.avg_rating DESC
+      LIMIT 20
       `, 
       (err, data) => {
         if (err) {
