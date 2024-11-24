@@ -622,5 +622,10 @@ const healthy_recipe = async function(req, res) {
     recipe,
     ingredient_info,
     category_tops,
-    category_info
+    category_info, 
+
+
+
+
+    healthy_recipe
   }
