@@ -838,6 +838,6 @@ const seasonal_recipe = async function(req, res) {
     getHealthyRecipes,
     getNutritionGuide,
     preparation_time,
-	  calculate_nutrition,
-	  seasonal_recipe,
+    calculate_nutrition,
+    seasonal_recipe,
   }
