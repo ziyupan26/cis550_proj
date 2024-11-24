@@ -404,7 +404,7 @@ const category_info = async function(req, res) {
   }
 }
 
-// Route 8: Get top contributors
+// Route 7: Get top contributors
 const getTopContributors = async function (req, res) {
   const query = `
     WITH avg_recipe_rating AS (
@@ -429,7 +429,7 @@ const getTopContributors = async function (req, res) {
   }
 };
 
-//Route 9 Healthy Recipe
+//Route 8: Healthy Recipe
 const getHealthyRecipes = async function (req, res) {
   const query = `
   WITH categorized_recipes AS (
@@ -492,7 +492,7 @@ const getHealthyRecipes = async function (req, res) {
 };
 
 
-// Route 10: Nuitrition Guide
+// Route 9: Nuitrition Guide
 const getNutritionGuide = async function (req, res) {
   const query = `
   WITH recent_reviews AS (
@@ -599,7 +599,7 @@ const getNutritionGuide = async function (req, res) {
   }
 };
 
-// Route 11: GET /preparation_time
+// Route 10: GET /preparation_time
 const preparation_time = async function(req, res) {
   const page = req.query.page;
   const pageSize = req.query.page_size ?? 10; // The query parameter names match what's being sent from the frontend (page_size instead of pageSize)
@@ -666,7 +666,7 @@ const preparation_time = async function(req, res) {
   }
 }
 
-// ROUTE 12: GET /calculate_nutrition/:ingredient
+// ROUTE 11: GET /calculate_nutrition/:ingredient
 const calculate_nutrition = async function(req, res) {
  const nutritionType = req.params.nutritionType;
  connection.query(`
@@ -724,7 +724,7 @@ const calculate_nutrition = async function(req, res) {
  });
 }
 
-// Route 13: GET /seasonal_recipe
+// Route 12: GET /seasonal_recipe
 const seasonal_recipe = async function(req, res) {
 
   const page = req.query.page;
