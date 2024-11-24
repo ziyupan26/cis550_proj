@@ -404,264 +404,440 @@ const category_info = async function(req, res) {
   }
 }
 
-// Route 7: GET /preparation_time
- const preparation_time = async function(req, res) {
-   //Average Rating of Recipes Grouped by Preparation Time Ranges: Groups recipes by preparation time ranges (e.g., 0–30 mins, 31–60 mins, etc.)
-	//and calculates the average rating for each group
-   // test: http://localhost:8080/preparation_time
-   const page = req.query.page;
-   const pageSize = req.query.page_size ?? 10; // The query parameter names match what's being sent from the frontend (page_size instead of pageSize)
- 
-   if (!page){
-     connection.query(
-       `SELECT
-		   CASE
-			   WHEN r.preptime <= 30 THEN '0-30 mins'
-			   WHEN r.preptime BETWEEN 31 AND 60 THEN '31-60 mins'
-			   WHEN r.preptime BETWEEN 61 AND 90 THEN '61-90 mins'
-			   ELSE '90+ mins'
-			   END AS PrepTimeRange,
-		   AVG(re.rating) AS AvgRating
-		FROM
-		   recipes r
-			   JOIN
-		   reviews re ON r.recipeid = re.recipeid
-		GROUP BY
-		   PrepTimeRange
-		ORDER BY
-		   PrepTimeRange
-		limit 20
-			   `, 
-       (err, data) => {
-         if (err) {
-           console.log(err);
-           res.json({})
-         } else {
-           res.json(data.rows)
-         }
-       }
-     )
-   } else {
-     const offset = (page - 1) * pageSize
-     connection.query(
-       `SELECT
-		   CASE
-			   WHEN r.preptime <= 30 THEN '0-30 mins'
-			   WHEN r.preptime BETWEEN 31 AND 60 THEN '31-60 mins'
-			   WHEN r.preptime BETWEEN 61 AND 90 THEN '61-90 mins'
-			   ELSE '90+ mins'
-			   END AS PrepTimeRange,
-		   AVG(re.rating) AS AvgRating
-		FROM
-		   recipes r
-			   JOIN
-		   reviews re ON r.recipeid = re.recipeid
-		GROUP BY
-		   PrepTimeRange
-		ORDER BY
-		   PrepTimeRange
-       LIMIT $1 OFFSET $2
-       `, [pageSize, offset]
-       , (err, data) => {
-         if (err) {
-           console.log(err)
-           res.json({})
-         } else {
-           res.json(data.rows)
-         }
-       }
-     )
-   }
- }
-
-// ROUTE 9: GET /calculate_nutrition/:ingredient
-const calculate_nutrition = async function(req, res) {
-  // given a type of nutrition value (eg. calorie, sodium, sugar, …), and a set of ingredients ('blueberries', 'butter', 'flour', 'sugar'), 
-  //calculate the total value of this element present in these ingredients
-  // test: http://localhost:8080/calculate_nutrition/sodium
-  const nutritionType = req.params.nutritionType;
-  connection.query(`
-    WITH SelectedIngredients AS (
-       SELECT ndbNo, descrip
-       FROM INGREDIENTS_MATCHING
-       WHERE ingredient IN ('blueberries', 'butter', 'flour', 'sugar')
+// Route 8: Get top contributors
+const getTopContributors = async function (req, res) {
+  const query = `
+    WITH avg_recipe_rating AS (
+      SELECT r.authorid, r.authorname, ROUND(AVG(rv.rating), 2) AS avg_rating, COUNT(rv.reviewid) AS review_count
+      FROM recipes r
+      JOIN reviews rv ON r.recipeid = rv.recipeid
+      GROUP BY r.authorid, r.authorname
     )
-    
-    -- Calculate the total nutrition value for the specified type
-    SELECT SUM(
-       CASE
-           WHEN :nutrition_type = 'energyKcal' THEN energyKcal
-           WHEN :nutrition_type = 'proteinG' THEN proteinG
-           WHEN :nutrition_type = 'saturatedFatsG' THEN saturatedFatsG
-           WHEN :nutrition_type = 'fatG' THEN fatG
-           WHEN :nutrition_type = 'carbG' THEN carbG
-           WHEN :nutrition_type = 'fiberG' THEN fiberG
-           WHEN :nutrition_type = 'sugarG' THEN sugarG
-           WHEN :nutrition_type = 'calciumMg' THEN calciumMg
-           WHEN :nutrition_type = 'ironMg' THEN ironMg
-           WHEN :nutrition_type = 'magnesiumMg' THEN magnesiumMg
-           WHEN :nutrition_type = 'phosphorusMg' THEN phosphorusMg
-           WHEN :nutrition_type = 'potassiumMg' THEN potassiumMg
-           WHEN :nutrition_type = 'sodiumMg' THEN sodiumMg
-           WHEN :nutrition_type = 'zincMg' THEN zincMg
-           WHEN :nutrition_type = 'copperMcg' THEN copperMcg
-           WHEN :nutrition_type = 'manganeseMg' THEN manganeseMg
-           WHEN :nutrition_type = 'seleniumMcg' THEN seleniumMcg
-           WHEN :nutrition_type = 'vitCMg' THEN vitCMg
-           WHEN :nutrition_type = 'thiaminMg' THEN thiaminMg
-           WHEN :nutrition_type = 'riboflavinMg' THEN riboflavinMg
-           WHEN :nutrition_type = 'niacinMg' THEN niacinMg
-           WHEN :nutrition_type = 'vitB6Mg' THEN vitB6Mg
-           WHEN :nutrition_type = 'folateMcg' THEN folateMcg
-           WHEN :nutrition_type = 'vitB12Mcg' THEN vitB12Mcg
-           WHEN :nutrition_type = 'vitAMcg' THEN vitAMcg
-           WHEN :nutrition_type = 'vitEMg' THEN vitEMg
-           WHEN :nutrition_type = 'vitD2Mcg' THEN vitD2Mcg
-           ELSE 0
-       END
-    ) AS total_nutrition_value
-    FROM INGREDIENTS i
-    JOIN SelectedIngredients si ON i.ndbNo = si.ndbNo 
-	where nutrition_type = $1
-    `, 
-    [nutritionType],
-    (err, data) => {
-    if (err) {
-      console.log(err);
-      res.json({});
-    } else {
-      res.json(data.rows[0]);
+    SELECT u.authorid, ar.authorname, ar.avg_rating, ar.review_count
+    FROM users u
+    JOIN avg_recipe_rating ar ON u.authorid = ar.authorid
+    ORDER BY ar.avg_rating DESC, ar.review_count DESC
+    LIMIT 10;
+  `;
+
+  try {
+    const data = await connection.query(query);
+    res.status(200).json(data.rows);
+  } catch (err) {
+    console.error('Error fetching top contributors:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+//Route 9 Healthy Recipe
+const getHealthyRecipes = async function (req, res) {
+  const query = `
+  WITH categorized_recipes AS (
+    SELECT recipeid, name, calories, carbohydratecontent, fatcontent, proteincontent, 'Low-Carb' AS category
+    FROM recipes
+    WHERE carbohydratecontent <= 15
+      AND calories <= 500
+  
+    UNION ALL
+  
+    SELECT recipeid, name, calories, carbohydratecontent, fatcontent, proteincontent, 'Vegan' AS category
+    FROM recipes
+    WHERE ingredients NOT ILIKE ANY (ARRAY['%meat%', '%chicken%', '%fish%', '%egg%', '%dairy%', '%honey%'])
+  
+    UNION ALL
+  
+    SELECT recipeid, name, calories, carbohydratecontent, fatcontent, proteincontent, 'Keto' AS category
+    FROM recipes
+    WHERE carbohydratecontent <= 10
+      AND fatcontent >= 20
+      AND proteincontent >= 10
+  
+    UNION ALL
+  
+    SELECT recipeid, name, calories, carbohydratecontent, fatcontent, proteincontent, 'Gluten-Free' AS category
+    FROM recipes
+    WHERE ingredients NOT ILIKE ANY (ARRAY['%wheat%', '%barley%', '%rye%', '%oats%'])
+  ),
+  ranked_recipes AS (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY category ORDER BY calories ASC) AS rn
+    FROM categorized_recipes
+  )
+  SELECT recipeid, name, calories, carbohydratecontent, fatcontent, proteincontent, category
+  FROM ranked_recipes
+  WHERE rn <= 20
+  ORDER BY category, calories ASC;
+  
+  `;
+
+  try {
+    console.log('Executing query:', query);
+    const data = await connection.query(query);
+
+    if (data.rows.length === 0) {
+      console.warn('No healthy recipes found');
+      return res.status(404).json({ error: 'No healthy recipes found' });
     }
-  });
+
+    console.log('Query results:', data.rows);
+    res.status(200).json(data.rows);
+  } catch (err) {
+    console.error('Error fetching healthy recipes:', {
+      query,
+      message: err.message,
+      stack: err.stack,
+    });
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+// Route 10: Nuitrition Guide
+const getNutritionGuide = async function (req, res) {
+  const query = `
+  WITH recent_reviews AS (
+    SELECT 
+      re.recipeid,
+      COUNT(re.reviewid) AS recent_reviews,
+      ROUND(AVG(re.rating), 2) AS avg_rating
+    FROM reviews re
+    WHERE re.datesubmitted >= NOW() - INTERVAL '3 months'
+    GROUP BY re.recipeid
+    HAVING COUNT(re.reviewid) > 10 AND AVG(re.rating) >= 4.0
+  ),
+  all_reviews AS (
+    SELECT 
+      re.recipeid,
+      COUNT(re.reviewid) AS recent_reviews,
+      ROUND(AVG(re.rating), 2) AS avg_rating
+    FROM reviews re
+    GROUP BY re.recipeid
+  ),
+  categorized_recipes AS (
+    SELECT 
+      r.recipeid,
+      r.name,
+      r.calories,
+      r.fibercontent,
+      r.proteincontent,
+      r.fatcontent,
+      rr.recent_reviews,
+      rr.avg_rating,
+      'Trending' AS category
+    FROM recipes r
+    JOIN recent_reviews rr ON r.recipeid = rr.recipeid
+    WHERE r.calories <= 600
+    
+    UNION ALL
+    
+    SELECT 
+      r.recipeid,
+      r.name,
+      r.calories,
+      r.fibercontent,
+      r.proteincontent,
+      r.fatcontent,
+      ar.recent_reviews,
+      ar.avg_rating,
+      'High-Fiber' AS category
+    FROM recipes r
+    JOIN all_reviews ar ON r.recipeid = ar.recipeid
+    WHERE r.fibercontent >= 8 AND r.calories <= 500
+    
+    UNION ALL
+    
+    SELECT 
+      r.recipeid,
+      r.name,
+      r.calories,
+      r.fibercontent,
+      r.proteincontent,
+      r.fatcontent,
+      ar.recent_reviews,
+      ar.avg_rating,
+      'Low-Calorie' AS category
+    FROM recipes r
+    JOIN all_reviews ar ON r.recipeid = ar.recipeid
+    WHERE r.calories <= 300
+    
+    UNION ALL
+    
+    SELECT 
+      r.recipeid,
+      r.name,
+      r.calories,
+      r.fibercontent,
+      r.proteincontent,
+      r.fatcontent,
+      ar.recent_reviews,
+      ar.avg_rating,
+      'High-Protein' AS category
+    FROM recipes r
+    JOIN all_reviews ar ON r.recipeid = ar.recipeid
+    WHERE r.proteincontent >= 15 AND r.fatcontent <= 10
+  )
+  SELECT 
+    recipeid, 
+    name, 
+    calories, 
+    fibercontent, 
+    proteincontent, 
+    fatcontent, 
+    recent_reviews, 
+    avg_rating, 
+    category
+  FROM categorized_recipes
+  ORDER BY category, avg_rating DESC, recent_reviews DESC;  
+  `;
+
+  try {
+    const data = await connection.query(query);
+    res.status(200).json(data.rows);
+  } catch (err) {
+    console.error('Error fetching nutrition guide:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Route 11: GET /preparation_time
+const preparation_time = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10; // The query parameter names match what's being sent from the frontend (page_size instead of pageSize)
+
+  if (!page){
+    connection.query(
+      `SELECT
+      CASE
+        WHEN r.preptime <= 30 THEN '0-30 mins'
+        WHEN r.preptime BETWEEN 31 AND 60 THEN '31-60 mins'
+        WHEN r.preptime BETWEEN 61 AND 90 THEN '61-90 mins'
+        ELSE '90+ mins'
+        END AS PrepTimeRange,
+      AVG(re.rating) AS AvgRating
+   FROM
+      recipes r
+        JOIN
+      reviews re ON r.recipeid = re.recipeid
+   GROUP BY
+      PrepTimeRange
+   ORDER BY
+      PrepTimeRange
+   limit 20
+        `, 
+      (err, data) => {
+        if (err) {
+          console.log(err);
+          res.json({})
+        } else {
+          res.json(data.rows)
+        }
+      }
+    )
+  } else {
+    const offset = (page - 1) * pageSize
+    connection.query(
+      `SELECT
+      CASE
+        WHEN r.preptime <= 30 THEN '0-30 mins'
+        WHEN r.preptime BETWEEN 31 AND 60 THEN '31-60 mins'
+        WHEN r.preptime BETWEEN 61 AND 90 THEN '61-90 mins'
+        ELSE '90+ mins'
+        END AS PrepTimeRange,
+      AVG(re.rating) AS AvgRating
+   FROM
+      recipes r
+        JOIN
+      reviews re ON r.recipeid = re.recipeid
+   GROUP BY
+      PrepTimeRange
+   ORDER BY
+      PrepTimeRange
+      LIMIT $1 OFFSET $2
+      `, [pageSize, offset]
+      , (err, data) => {
+        if (err) {
+          console.log(err)
+          res.json({})
+        } else {
+          res.json(data.rows)
+        }
+      }
+    )
+  }
 }
 
-// Route 12: GET /seasonal_recipe
- const seasonal_recipe = async function(req, res) {
-   // cgive top 100 both highly rated and popular (rate by more than 10 people) recipe recommendations based on each season.
-   // test: http://localhost:8080/seasonal_recipe
-   const page = req.query.page;
-   const pageSize = req.query.page_size ?? 10; // The query parameter names match what's being sent from the frontend (page_size instead of pageSize)
- 
-   if (!page){
-     connection.query(
-       `WITH seasonal_reviews AS (
-		  SELECT r.recipeid, r.name, r.recipeinstructions,
-				 EXTRACT(MONTH FROM r.datepublished) AS month,
-				 COUNT(rv.reviewid) AS review_count,
-				 ROUND(AVG(rv.rating), 2) AS avg_rating
-		  FROM recipes r
-		  LEFT JOIN reviews rv ON r.recipeid = rv.recipeid
-		  GROUP BY r.recipeid, r.name, r.recipeinstructions, month
-		),
-		season_category AS (
-		  SELECT recipeid, name, recipeinstructions,
-				 CASE
-					 WHEN month IN (3, 4, 5) THEN 'Spring'
-					 WHEN month IN (6, 7, 8) THEN 'Summer'
-					 WHEN month IN (9, 10, 11) THEN 'Fall'
-					 ELSE 'Winter'
-				 END AS season,
-				 review_count, avg_rating
-		  FROM seasonal_reviews
-		  WHERE avg_rating > 4.50
-		),
-		ranked_recipes AS (
-		  SELECT recipeid, name, recipeinstructions, season, review_count, avg_rating,
-				 ROW_NUMBER() OVER (PARTITION BY season ORDER BY avg_rating DESC) AS rank
-		  FROM season_category
-		  WHERE review_count > 20
-		)
-		SELECT recipeid, name, recipeinstructions, season, avg_rating, review_count
-		FROM ranked_recipes
-		WHERE rank <= 100
-		ORDER BY season, avg_rating DESC
-		limit 20
-			   `, 
-       (err, data) => {
-         if (err) {
-           console.log(err);
-           res.json({})
-         } else {
-           res.json(data.rows)
-         }
-       }
-     )
+// ROUTE 12: GET /calculate_nutrition/:ingredient
+const calculate_nutrition = async function(req, res) {
+ const nutritionType = req.params.nutritionType;
+ connection.query(`
+   WITH SelectedIngredients AS (
+      SELECT ndbNo, descrip
+      FROM INGREDIENTS_MATCHING
+      WHERE ingredient IN ('blueberries', 'butter', 'flour', 'sugar')
+   )
+   
+   -- Calculate the total nutrition value for the specified type
+   SELECT SUM(
+      CASE
+          WHEN :nutrition_type = 'energyKcal' THEN energyKcal
+          WHEN :nutrition_type = 'proteinG' THEN proteinG
+          WHEN :nutrition_type = 'saturatedFatsG' THEN saturatedFatsG
+          WHEN :nutrition_type = 'fatG' THEN fatG
+          WHEN :nutrition_type = 'carbG' THEN carbG
+          WHEN :nutrition_type = 'fiberG' THEN fiberG
+          WHEN :nutrition_type = 'sugarG' THEN sugarG
+          WHEN :nutrition_type = 'calciumMg' THEN calciumMg
+          WHEN :nutrition_type = 'ironMg' THEN ironMg
+          WHEN :nutrition_type = 'magnesiumMg' THEN magnesiumMg
+          WHEN :nutrition_type = 'phosphorusMg' THEN phosphorusMg
+          WHEN :nutrition_type = 'potassiumMg' THEN potassiumMg
+          WHEN :nutrition_type = 'sodiumMg' THEN sodiumMg
+          WHEN :nutrition_type = 'zincMg' THEN zincMg
+          WHEN :nutrition_type = 'copperMcg' THEN copperMcg
+          WHEN :nutrition_type = 'manganeseMg' THEN manganeseMg
+          WHEN :nutrition_type = 'seleniumMcg' THEN seleniumMcg
+          WHEN :nutrition_type = 'vitCMg' THEN vitCMg
+          WHEN :nutrition_type = 'thiaminMg' THEN thiaminMg
+          WHEN :nutrition_type = 'riboflavinMg' THEN riboflavinMg
+          WHEN :nutrition_type = 'niacinMg' THEN niacinMg
+          WHEN :nutrition_type = 'vitB6Mg' THEN vitB6Mg
+          WHEN :nutrition_type = 'folateMcg' THEN folateMcg
+          WHEN :nutrition_type = 'vitB12Mcg' THEN vitB12Mcg
+          WHEN :nutrition_type = 'vitAMcg' THEN vitAMcg
+          WHEN :nutrition_type = 'vitEMg' THEN vitEMg
+          WHEN :nutrition_type = 'vitD2Mcg' THEN vitD2Mcg
+          ELSE 0
+      END
+   ) AS total_nutrition_value
+   FROM INGREDIENTS i
+   JOIN SelectedIngredients si ON i.ndbNo = si.ndbNo 
+ where nutrition_type = $1
+   `, 
+   [nutritionType],
+   (err, data) => {
+   if (err) {
+     console.log(err);
+     res.json({});
    } else {
-     const offset = (page - 1) * pageSize
-     connection.query(
-       `WITH seasonal_reviews AS (
-		  SELECT r.recipeid, r.name, r.recipeinstructions,
-				 EXTRACT(MONTH FROM r.datepublished) AS month,
-				 COUNT(rv.reviewid) AS review_count,
-				 ROUND(AVG(rv.rating), 2) AS avg_rating
-		  FROM recipes r
-		  LEFT JOIN reviews rv ON r.recipeid = rv.recipeid
-		  GROUP BY r.recipeid, r.name, r.recipeinstructions, month
-		),
-		season_category AS (
-		  SELECT recipeid, name, recipeinstructions,
-				 CASE
-					 WHEN month IN (3, 4, 5) THEN 'Spring'
-					 WHEN month IN (6, 7, 8) THEN 'Summer'
-					 WHEN month IN (9, 10, 11) THEN 'Fall'
-					 ELSE 'Winter'
-				 END AS season,
-				 review_count, avg_rating
-		  FROM seasonal_reviews
-		  WHERE avg_rating > 4.50
-		),
-		ranked_recipes AS (
-		  SELECT recipeid, name, recipeinstructions, season, review_count, avg_rating,
-				 ROW_NUMBER() OVER (PARTITION BY season ORDER BY avg_rating DESC) AS rank
-		  FROM season_category
-		  WHERE review_count > 20
-		)
-		SELECT recipeid, name, recipeinstructions, season, avg_rating, review_count
-		FROM ranked_recipes
-		WHERE rank <= 100
-		ORDER BY season, avg_rating DESC
-       LIMIT $1 OFFSET $2
-       `, [pageSize, offset]
-       , (err, data) => {
-         if (err) {
-           console.log(err)
-           res.json({})
-         } else {
-           res.json(data.rows)
-         }
-       }
-     )
+     res.json(data.rows[0]);
    }
- }
+ });
+}
 
+// Route 13: GET /seasonal_recipe
+const seasonal_recipe = async function(req, res) {
 
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10;
 
-
-
-
-
-
-
-
-
-
-
-/********************************
- * RECOMMENDATION ROUTES *
- ********************************/
-
+  if (!page){
+    connection.query(
+      `WITH seasonal_reviews AS (
+     SELECT r.recipeid, r.name, r.recipeinstructions,
+        EXTRACT(MONTH FROM r.datepublished) AS month,
+        COUNT(rv.reviewid) AS review_count,
+        ROUND(AVG(rv.rating), 2) AS avg_rating
+     FROM recipes r
+     LEFT JOIN reviews rv ON r.recipeid = rv.recipeid
+     GROUP BY r.recipeid, r.name, r.recipeinstructions, month
+   ),
+   season_category AS (
+     SELECT recipeid, name, recipeinstructions,
+        CASE
+          WHEN month IN (3, 4, 5) THEN 'Spring'
+          WHEN month IN (6, 7, 8) THEN 'Summer'
+          WHEN month IN (9, 10, 11) THEN 'Fall'
+          ELSE 'Winter'
+        END AS season,
+        review_count, avg_rating
+     FROM seasonal_reviews
+     WHERE avg_rating > 4.50
+   ),
+   ranked_recipes AS (
+     SELECT recipeid, name, recipeinstructions, season, review_count, avg_rating,
+        ROW_NUMBER() OVER (PARTITION BY season ORDER BY avg_rating DESC) AS rank
+     FROM season_category
+     WHERE review_count > 20
+   )
+   SELECT recipeid, name, recipeinstructions, season, avg_rating, review_count
+   FROM ranked_recipes
+   WHERE rank <= 100
+   ORDER BY season, avg_rating DESC
+   limit 20
+        `, 
+      (err, data) => {
+        if (err) {
+          console.log(err);
+          res.json({})
+        } else {
+          res.json(data.rows)
+        }
+      }
+    )
+  } else {
+    const offset = (page - 1) * pageSize
+    connection.query(
+      `WITH seasonal_reviews AS (
+     SELECT r.recipeid, r.name, r.recipeinstructions,
+        EXTRACT(MONTH FROM r.datepublished) AS month,
+        COUNT(rv.reviewid) AS review_count,
+        ROUND(AVG(rv.rating), 2) AS avg_rating
+     FROM recipes r
+     LEFT JOIN reviews rv ON r.recipeid = rv.recipeid
+     GROUP BY r.recipeid, r.name, r.recipeinstructions, month
+   ),
+   season_category AS (
+     SELECT recipeid, name, recipeinstructions,
+        CASE
+          WHEN month IN (3, 4, 5) THEN 'Spring'
+          WHEN month IN (6, 7, 8) THEN 'Summer'
+          WHEN month IN (9, 10, 11) THEN 'Fall'
+          ELSE 'Winter'
+        END AS season,
+        review_count, avg_rating
+     FROM seasonal_reviews
+     WHERE avg_rating > 4.50
+   ),
+   ranked_recipes AS (
+     SELECT recipeid, name, recipeinstructions, season, review_count, avg_rating,
+        ROW_NUMBER() OVER (PARTITION BY season ORDER BY avg_rating DESC) AS rank
+     FROM season_category
+     WHERE review_count > 20
+   )
+   SELECT recipeid, name, recipeinstructions, season, avg_rating, review_count
+   FROM ranked_recipes
+   WHERE rank <= 100
+   ORDER BY season, avg_rating DESC
+      LIMIT $1 OFFSET $2
+      `, [pageSize, offset]
+      , (err, data) => {
+        if (err) {
+          console.log(err)
+          res.json({})
+        } else {
+          res.json(data.rows)
+        }
+      }
+    )
+  }
+};
 
 
 
   // Export the functions
   module.exports = {
-    	random,
-    	search_recipe,
-    	recipe,
-    	ingredient_info,
-    	category_tops,
-    	category_info, 
-	preparation_time,
-	calculate_nutrition,
-	seasonal_recipe
+    random,
+    search_recipe,
+    recipe,
+    ingredient_info,
+    category_tops,
+    category_info,
+    addToBookmark,
+    removeFromBookmark,
+    getTopContributors,
+    getHealthyRecipes,
+    getNutritionGuide,
+    preparation_time,
+	  calculate_nutrition,
+	  seasonal_recipe,
   }
