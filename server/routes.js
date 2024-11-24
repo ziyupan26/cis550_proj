@@ -103,13 +103,13 @@ const search_recipe = async function (req, res) {
   // review count and submitted time
   // test: http://localhost:8080/search_recipe?ingredients=egg
   const ingredients = req.query.ingredients ?? '';
-  const cooktimeLow = req.query.cooktime_low ?? 1;
+  const cooktimeLow = req.query.cooktime_low ?? 0;
   const cooktimeHigh = req.query.cooktime_high ?? 120;
-  const preptimeLow = req.query.preptime_low ?? 1;
+  const preptimeLow = req.query.preptime_low ?? 0;
   const preptimeHigh = req.query.preptime_high ?? 120;
   const ratingLow = req.query.avg_rate_low ?? 0;
   const ratingHigh = req.query.avg_rate_high ?? 5;
-  const caloriesLow = req.query.calories_low ?? 1;
+  const caloriesLow = req.query.calories_low ?? 0;
   const caloriesHigh = req.query.calories_high ?? 10000;
   const unwant = req.query.unwant ?? '';
 
@@ -129,43 +129,43 @@ const search_recipe = async function (req, res) {
   `;
 
   if (ingredients){
-    query += `AND ingredients LIKE $${queryParams.length + 1}`;
+    query += ` AND ingredients LIKE $${queryParams.length + 1}`;
     queryParams.push(`%${ingredients}%`);
   }
   if (cooktimeLow){
-    query += `AND cooktime >= $${queryParams.length + 1}`;
+    query += ` AND cooktime >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(cooktimeLow));
   }
   if (cooktimeHigh){
-    query += `AND cooktime <= $${queryParams.length + 1}`;
+    query += ` AND cooktime <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(cooktimeHigh));
   }
   if (preptimeLow){
-    query += `AND preptime >= $${queryParams.length + 1}`;
+    query += ` AND preptime >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(preptimeLow));
   }
   if (preptimeHigh){
-    query += `AND preptime <= $${queryParams.length + 1}`;
+    query += ` AND preptime <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(preptimeHigh));
   }
-  if (ratingLow !== null && ratingLow !== undefined){
-    query += `AND a.avg_rate >= $${queryParams.length + 1}`;
+  if (ratingLow){
+    query += ` AND a.avg_rate >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(ratingLow));
   }
   if (ratingHigh){
-    query += `AND a.avg_rate <= $${queryParams.length + 1}`;
+    query += ` AND a.avg_rate <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(ratingHigh));
   }
   if (caloriesLow){
-    query += `AND calories >= $${queryParams.length + 1}`;
+    query += ` AND calories >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(caloriesLow));
   }
   if (caloriesHigh){
-    query += `AND calories <= $${queryParams.length + 1}`;
+    query += ` AND calories <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(caloriesHigh));
   }
   if (unwant){
-    query += `AND NOT EXISTS (
+    query += ` AND NOT EXISTS (
         SELECT 1
         FROM ingredients_matching im
         WHERE im.ingredient = $${queryParams.length + 1}
@@ -174,7 +174,7 @@ const search_recipe = async function (req, res) {
     queryParams.push(unwant);
   }
 
-  query += `ORDER BY a.avg_rate DESC, a.review_count DESC, a.date DESC`;
+  query += ` ORDER BY a.avg_rate DESC, a.review_count DESC, a.date DESC`;
 
   connection.query(query, queryParams, (err,data)=>{
     if (err) {
