@@ -404,6 +404,93 @@ const category_info = async function(req, res) {
   }
 }
 
+// ROUTE 7: GET /allergen_elimination/:category
+// allow users to search for recipes filtering out specific unwanted/allergic ingredients, such as ‘nuts’
+// URL: http://localhost:8080/allergen_elimination/nuts
+
+const allergen_elimination = async function(req, res) {
+  // pagination
+  const page = req.query.page;
+  const pageSize = req.query.page_size ? req.query.page_size : 10;
+  const inputCategory = req.params.category;
+
+  if(!page) {
+    connection.query(`
+      WITH avg_rate AS (
+        SELECT recipeid,
+               TO_CHAR(datesubmitted, 'YYYY-MM-DD') AS date,
+               ROUND(AVG(rating), 2) AS avg_rate,
+               COUNT(review) AS review_count
+        FROM reviews
+        GROUP BY recipeid, datesubmitted
+      )
+      SELECT DISTINCT rc.name,
+                     rc.authorname,
+                     rc.description,
+                     rc.recipecategory,
+                     a.avg_rate,
+                     a.review_count,
+                     a.date
+      FROM recipes rc
+      JOIN avg_rate a ON rc.recipeid = a.recipeid
+      WHERE 1=1
+       AND NOT EXISTS (
+           SELECT 1
+           FROM ingredients_matching im
+           WHERE im.ingredient = $1
+             AND rc.recipeingredientparts LIKE '%' || im.ingredient || '%'
+       )
+      ORDER BY a.avg_rate DESC, a.review_count DESC, a.date DESC
+	  limit 20
+      `, [inputCategory], (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows);
+      }
+    });
+  } else {
+    const offset = (page - 1) * pageSize;
+    connection.query(`
+      WITH avg_rate AS (
+        SELECT recipeid,
+               TO_CHAR(datesubmitted, 'YYYY-MM-DD') AS date,
+               ROUND(AVG(rating), 2) AS avg_rate,
+               COUNT(review) AS review_count
+        FROM reviews
+        GROUP BY recipeid, datesubmitted
+      )
+      SELECT DISTINCT rc.name,
+                     rc.authorname,
+                     rc.description,
+                     rc.recipecategory,
+                     a.avg_rate,
+                     a.review_count,
+                     a.date
+      FROM recipes rc
+      JOIN avg_rate a ON rc.recipeid = a.recipeid
+      WHERE 1=1
+       AND NOT EXISTS (
+           SELECT 1
+           FROM ingredients_matching im
+           WHERE im.ingredient = $1
+             AND rc.recipeingredientparts LIKE '%' || im.ingredient || '%'
+       )
+      ORDER BY a.avg_rate DESC, a.review_count DESC, a.date DESC
+      LIMIT ${pageSize}
+      OFFSET ${offset};
+      `, [inputCategory,pageSize, offset], (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows);
+      }
+    });  
+  }
+}
+
 
 
 
