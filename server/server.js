@@ -20,7 +20,7 @@ app.get('/top_contributors', routes.getTopContributors);
 app.get('/healthy_recipes', routes.getHealthyRecipes);
 app.get('/nutrition_guide', routes.getNutritionGuide);
 app.get('/preparation_time', routes.preparation_time);
-app.get('/calculate_nutrition/:nutritionType', routes.calculate_nutrition);
+app.get('/calculate_nutrition/:nutritionType/:ingredients', routes.calculate_nutrition);
 app.get('/seasonal_recipe', routes.seasonal_recipe);
 
 

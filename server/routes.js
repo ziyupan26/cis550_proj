@@ -667,62 +667,80 @@ const preparation_time = async function(req, res) {
 }
 
 // ROUTE 11: GET /calculate_nutrition/:ingredient
+// Calculate the total value of a specific nutrition (user input) of a list of ingredients (user input)
+// Test URL: http://localhost:8080/calculate_nutrition/energyKcal/egg,flour,milk
+//           http://localhost:8080/calculate_nutrition/proteinG/blueberries,butter,flour,sugar
+
 const calculate_nutrition = async function(req, res) {
- const nutritionType = req.params.nutritionType;
- connection.query(`
-   WITH SelectedIngredients AS (
+
+  const nutritionType = req.params.nutritionType;
+  const ingredients = req.params.ingredients ? req.params.ingredients.split(',') : [];
+
+  // check if both nutrition type and ingredients are provided
+  if (!Array.isArray(ingredients) || ingredients.length === 0 ||nutritionType === undefined) {
+    return res.status(400).json({ error: 'Must have valid nutrition type and ingredient(s).' });
+  }
+  // Create an array of placeholders for the ingredients, starting with $2
+  const ingredientPlaceholders = ingredients.map((_, index) => `$${index + 2}`).join(', ');
+
+  const query = `WITH SelectedIngredients AS (
       SELECT ndbNo, descrip
       FROM INGREDIENTS_MATCHING
-      WHERE ingredient IN ('blueberries', 'butter', 'flour', 'sugar')
-   )
-   
-   -- Calculate the total nutrition value for the specified type
-   SELECT SUM(
+      WHERE ingredient IN (${ingredientPlaceholders})
+    )
+    SELECT SUM(
       CASE
-          WHEN :nutrition_type = 'energyKcal' THEN energyKcal
-          WHEN :nutrition_type = 'proteinG' THEN proteinG
-          WHEN :nutrition_type = 'saturatedFatsG' THEN saturatedFatsG
-          WHEN :nutrition_type = 'fatG' THEN fatG
-          WHEN :nutrition_type = 'carbG' THEN carbG
-          WHEN :nutrition_type = 'fiberG' THEN fiberG
-          WHEN :nutrition_type = 'sugarG' THEN sugarG
-          WHEN :nutrition_type = 'calciumMg' THEN calciumMg
-          WHEN :nutrition_type = 'ironMg' THEN ironMg
-          WHEN :nutrition_type = 'magnesiumMg' THEN magnesiumMg
-          WHEN :nutrition_type = 'phosphorusMg' THEN phosphorusMg
-          WHEN :nutrition_type = 'potassiumMg' THEN potassiumMg
-          WHEN :nutrition_type = 'sodiumMg' THEN sodiumMg
-          WHEN :nutrition_type = 'zincMg' THEN zincMg
-          WHEN :nutrition_type = 'copperMcg' THEN copperMcg
-          WHEN :nutrition_type = 'manganeseMg' THEN manganeseMg
-          WHEN :nutrition_type = 'seleniumMcg' THEN seleniumMcg
-          WHEN :nutrition_type = 'vitCMg' THEN vitCMg
-          WHEN :nutrition_type = 'thiaminMg' THEN thiaminMg
-          WHEN :nutrition_type = 'riboflavinMg' THEN riboflavinMg
-          WHEN :nutrition_type = 'niacinMg' THEN niacinMg
-          WHEN :nutrition_type = 'vitB6Mg' THEN vitB6Mg
-          WHEN :nutrition_type = 'folateMcg' THEN folateMcg
-          WHEN :nutrition_type = 'vitB12Mcg' THEN vitB12Mcg
-          WHEN :nutrition_type = 'vitAMcg' THEN vitAMcg
-          WHEN :nutrition_type = 'vitEMg' THEN vitEMg
-          WHEN :nutrition_type = 'vitD2Mcg' THEN vitD2Mcg
-          ELSE 0
+        WHEN $1 = 'energyKcal' THEN energyKcal
+        WHEN $1 = 'proteinG' THEN proteinG
+        WHEN $1 = 'saturatedFatsG' THEN saturatedFatsG
+        WHEN $1 = 'fatG' THEN fatG
+        WHEN $1 = 'carbG' THEN carbG
+        WHEN $1 = 'fiberG' THEN fiberG
+        WHEN $1 = 'sugarG' THEN sugarG
+        WHEN $1 = 'calciumMg' THEN calciumMg
+        WHEN $1 = 'ironMg' THEN ironMg
+        WHEN $1 = 'magnesiumMg' THEN magnesiumMg
+        WHEN $1 = 'phosphorusMg' THEN phosphorusMg
+        WHEN $1 = 'potassiumMg' THEN potassiumMg
+        WHEN $1 = 'sodiumMg' THEN sodiumMg
+        WHEN $1 = 'zincMg' THEN zincMg
+        WHEN $1 = 'copperMcg' THEN copperMcg
+        WHEN $1 = 'manganeseMg' THEN manganeseMg
+        WHEN $1 = 'seleniumMcg' THEN seleniumMcg
+        WHEN $1 = 'vitCMg' THEN vitCMg
+        WHEN $1 = 'thiaminMg' THEN thiaminMg
+        WHEN $1 = 'riboflavinMg' THEN riboflavinMg
+        WHEN $1 = 'niacinMg' THEN niacinMg
+        WHEN $1 = 'vitB6Mg' THEN vitB6Mg
+        WHEN $1 = 'folateMcg' THEN folateMcg
+        WHEN $1 = 'vitB12Mcg' THEN vitB12Mcg
+        WHEN $1 = 'vitAMcg' THEN vitAMcg
+        WHEN $1 = 'vitEMg' THEN vitEMg
+        WHEN $1 = 'vitD2Mcg' THEN vitD2Mcg
+        ELSE 0
       END
-   ) AS total_nutrition_value
-   FROM INGREDIENTS i
-   JOIN SelectedIngredients si ON i.ndbNo = si.ndbNo 
- where nutrition_type = $1
-   `, 
-   [nutritionType],
+    ) AS total_nutrition_value
+    FROM INGREDIENTS i
+    JOIN SelectedIngredients si ON i.ndbNo = si.ndbNo
+  `;
+
+  // Combine nutritionType and ingredients into a single array for query param
+  const queryParams = [nutritionType, ...ingredients];
+
+  connection.query(query, queryParams,
    (err, data) => {
    if (err) {
      console.log(err);
      res.json({});
    } else {
-     res.json(data.rows[0]);
+     res.json({
+      name: nutritionType,
+      value: data.rows[0]?.total_nutrition_value || null,
+     });
    }
  });
 }
+
 
 // Route 12: GET /seasonal_recipe
 const seasonal_recipe = async function(req, res) {
@@ -832,8 +850,8 @@ const seasonal_recipe = async function(req, res) {
     ingredient_info,
     category_tops,
     category_info,
-    addToBookmark,
-    removeFromBookmark,
+    // addToBookmark,
+    // removeFromBookmark,
     getTopContributors,
     getHealthyRecipes,
     getNutritionGuide,
