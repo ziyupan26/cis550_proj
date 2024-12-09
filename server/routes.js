@@ -237,7 +237,7 @@ const all_ingredients = async function(req, res) {
   // protein per g, fat per g, carbon per g, fiber per mg, sugar per g, Vitamin (A, B6, B12, C, D2, E)
   // test: http://localhost:8080/all_ingredients
   connection.query(`
-    SELECT im.ingredient AS name
+    SELECT UPPER(LEFT(im.ingredient, 1)) || SUBSTR(ingredient, 2) AS name
     FROM ingredients_matching im
     ORDER BY name
     `,
