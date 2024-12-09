@@ -231,6 +231,25 @@ const recipe = async function(req, res) {
     }
   )
 }
+// ROUTE 4.1: GET /all_ingredients
+const all_ingredients = async function(req, res) {
+  // Show an ingredient (e.g. peanuts), including its energy per kcalcory,
+  // protein per g, fat per g, carbon per g, fiber per mg, sugar per g, Vitamin (A, B6, B12, C, D2, E)
+  // test: http://localhost:8080/all_ingredients
+  connection.query(`
+    SELECT im.ingredient AS name
+    FROM ingredients_matching im
+    ORDER BY name
+    `,
+    (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
 
 // ROUTE 4: GET /ingredient_info/:ingredient
 const ingredient_info = async function(req, res) {
@@ -666,7 +685,7 @@ const preparation_time = async function(req, res) {
   }
 }
 
-// ROUTE 11: GET /calculate_nutrition/:ingredient
+// ROUTE 11: GET /calculate_nutrition/:nutritionType/:ingredients
 // Calculate the total value of a specific nutrition (user input) of a list of ingredients (user input)
 // Test URL: http://localhost:8080/calculate_nutrition/energyKcal/egg,flour,milk
 //           http://localhost:8080/calculate_nutrition/proteinG/blueberries,butter,flour,sugar
@@ -847,6 +866,7 @@ const seasonal_recipe = async function(req, res) {
     random,
     search_recipe,
     recipe,
+    all_ingredients,
     ingredient_info,
     category_tops,
     category_info,
