@@ -12,14 +12,20 @@ app.use(cors({
 // provide their handlers that we implemented in routes.js
 app.get('/random', routes.random);
 app.get('/search_recipe', routes.search_recipe)
-app.get('/recipe/:recipeid', routes.recipe);
+
+app.get('/recipe/:recipeId', routes.recipe);
+app.get('/category/:recipecategory', routes.category);
+
 app.get('/ingredient_info/:ingredient', routes.ingredient_info)
-app.get('/category_tops/:category', routes.category_tops);
-app.get('/category_info/:category', routes.category_info);
+
+app.get('/category_tops', routes.category_tops);
+app.get('/category_info/:recipecategory', routes.category_info);
+
 app.get('/top_contributors', routes.getTopContributors);
 app.get('/healthy_recipes', routes.getHealthyRecipes);
 app.get('/nutrition_guide', routes.getNutritionGuide);
 app.get('/preparation_time', routes.preparation_time);
+
 app.get('/calculate_nutrition/:nutritionType/:ingredients', routes.calculate_nutrition);
 app.get('/seasonal_recipe', routes.seasonal_recipe);
 
