@@ -35,7 +35,8 @@ import logo from './maskable_icon-removebg-preview.png';
 // props to how it changes the look of the component.
 export default function NavBar() {
   return (
-    <AppBar position='static'>
+    // <AppBar position='static'>
+    <AppBar position="sticky">
       <Container maxWidth='xl'>
         <Toolbar disableGutters>
           {/* <NavText href='/' text='SWIFTIFY' isMain />
