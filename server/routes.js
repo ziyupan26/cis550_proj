@@ -195,7 +195,8 @@ const recipe = async function(req, res) {
   // Show a recipe (e.g. 10711), including its name, ingredients, nutritional
   // information, instructions, rating, 5 most recent reviews
   // test: http://localhost:8080/recipe/10711
-  connection.query(`
+  connection.query(
+    `
     WITH review_rank AS (
         SELECT reviewid, recipeid, authorid, authorname, review, rating,
             ROW_NUMBER() OVER (
@@ -207,7 +208,9 @@ const recipe = async function(req, res) {
     )
     SELECT name, recipes.authorname, cooktime, preptime, totaltime, recipecategory,
         ingredients, recipeinstructions, calories, fatcontent, fibercontent,
-        proteincontent, AVG(rr.rating) AS avg_rate,
+        proteincontent, ROUND(AVG(rr.rating),2) AS avg_rate, 
+        CASE WHEN images='[]' THEN 'https://i.ibb.co/W5WM4v8/maskable-icon-removebg-preview.png'
+              ELSE images END AS url, 
         JSON_AGG(
             JSON_BUILD_OBJECT(
                 'reviewer', rr.authorname,
@@ -220,7 +223,50 @@ const recipe = async function(req, res) {
     GROUP BY recipes.recipeid, name, recipes.authorname, cooktime, preptime,
         totaltime, recipecategory, ingredients, recipeinstructions, calories, fatcontent,
         fibercontent, proteincontent
-    `,[req.params.recipeid]
+    `
+    ,[req.params.recipeId]
+    , (err, data) => {
+      if (err){
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows[0]);
+      }
+    }
+  )
+}
+
+const category = async function(req, res) {
+  connection.query(
+    `
+      WITH category_ratings AS (
+          SELECT r.recipecategory, r.recipeID, AVG(re.rating) AS AvgRating
+          FROM recipes r
+                  JOIN reviews re ON r.recipeID = re.recipeID
+          WHERE r.recipecategory = $1
+          GROUP BY r.recipecategory, r.recipeID
+      ),
+          image_links AS (
+              SELECT recipeid,
+                      trim(both '''' from split_part(
+                              replace(replace(images, '[', ''), ']', ''), ', ', 1)) AS first_url
+              FROM recipes
+          ),
+          ranked_categories AS (
+              SELECT
+                  cr.recipecategory,
+                  i.first_url AS url,
+                  ROW_NUMBER() OVER (PARTITION BY cr.recipecategory ORDER BY cr.recipeID) AS row_num
+              FROM category_ratings cr
+                        JOIN recipes r ON cr.recipeID = r.recipeID
+                        JOIN image_links i ON cr.recipeid = i.recipeid
+          )
+      SELECT recipecategory,
+            CASE WHEN url='' THEN 'https://i.ibb.co/W5WM4v8/maskable-icon-removebg-preview.png'
+              ELSE url END AS url
+      FROM ranked_categories
+      WHERE row_num = 1;`
+    ,[req.params.recipecategory]
     , (err, data) => {
       if (err){
         console.log(err);
@@ -266,30 +312,44 @@ const ingredient_info = async function(req, res) {
 // review count for this category 
 // --> can be implemented as a side bar allowing users to click on a category and see
 // the highest-rated recipe for that category
-// URL: http://localhost:8080/categories/Apple
+// URL: http://localhost:8080/category_tops
+// http://localhost:8080/category_tops?page=1&page_size=5
 const category_tops = async function(req, res) {
-  const userInput = req.params.category;
+  // const userInput = req.params.category;
   // pagination
   const page = req.query.page;
-  const pageSize = req.query.page_size ? req.query.page_size : 10;
+  const pageSize = req.query.page_size ?? 50;;
 
   if (!page) {
-    connection.query(`
+    connection.query(
+      `
       WITH category_ratings AS (
-        SELECT r.recipecategory, r.recipeID, CAST(AVG(re.rating) AS INT) AS AvgRating, COUNT(re.ReviewID) AS ReviewCount
-        FROM recipes r
-        JOIN reviews re ON r.recipeID = re.recipeID
-        GROUP BY r.recipecategory, r.recipeID
-      )
-      SELECT cr.recipecategory AS category, r.name AS RecipeName, cr.AvgRating, cr.ReviewCount
-      FROM category_ratings cr
-      JOIN recipes r ON cr.recipeID = r.recipeID
-      WHERE (cr.recipecategory, cr.AvgRating) IN (
-        SELECT recipecategory, MAX(AvgRating)
-        FROM category_ratings
-        GROUP BY recipecategory)
-      AND cr.recipecategory = $1
-      `, [userInput], (err, data) => {
+          SELECT r.recipecategory, r.recipeID, AVG(re.rating) AS AvgRating
+          FROM recipes r
+                  JOIN reviews re ON r.recipeID = re.recipeID
+          GROUP BY r.recipecategory, r.recipeID
+      ),
+          image_links AS (
+              SELECT recipeid,
+                      trim(both '''' from split_part(
+                              replace(replace(images, '[', ''), ']', ''), ', ', 1)) AS first_url
+              FROM recipes
+          ),
+          ranked_categories AS (
+              SELECT
+                  cr.recipecategory,
+                  i.first_url AS url,
+                  ROW_NUMBER() OVER (PARTITION BY cr.recipecategory ORDER BY cr.recipeID) AS row_num
+              FROM category_ratings cr
+                        JOIN recipes r ON cr.recipeID = r.recipeID
+                        JOIN image_links i ON cr.recipeid = i.recipeid
+          )
+      SELECT recipecategory,
+            CASE WHEN url='' THEN 'https://i.ibb.co/W5WM4v8/maskable-icon-removebg-preview.png'
+              ELSE url END AS url
+      FROM ranked_categories
+      WHERE row_num = 1;`
+      , (err, data) => {
       if (err) {
         console.log(err);
         res.json({});
@@ -299,24 +359,38 @@ const category_tops = async function(req, res) {
     });
   } else {
     const offset = (page - 1) * pageSize;
-    connection.query(`
+    connection.query(
+      `
       WITH category_ratings AS (
-        SELECT r.recipecategory, r.recipeID, CAST(AVG(re.rating) AS INT) AS AvgRating, COUNT(re.ReviewID) AS ReviewCount
-        FROM recipes r
-        JOIN reviews re ON r.recipeID = re.recipeID
-        GROUP BY r.recipecategory, r.recipeID
-      )
-      SELECT cr.recipecategory AS category, r.name AS RecipeName, cr.AvgRating, cr.ReviewCount
-      FROM category_ratings cr
-      JOIN recipes r ON cr.recipeID = r.recipeID
-      WHERE (cr.recipecategory, cr.AvgRating) IN (
-        SELECT recipecategory, MAX(AvgRating)
-        FROM category_ratings
-        GROUP BY recipecategory)
-      AND cr.recipecategory = $1
-      LIMIT ${pageSize}
-      OFFSET ${offset}
-      `, [userInput], (err, data) => {
+          SELECT r.recipecategory, r.recipeID, AVG(re.rating) AS AvgRating
+          FROM recipes r
+                  JOIN reviews re ON r.recipeID = re.recipeID
+          GROUP BY r.recipecategory, r.recipeID
+      ),
+          image_links AS (
+              SELECT recipeid,
+                      trim(both '''' from split_part(
+                              replace(replace(images, '[', ''), ']', ''), ', ', 1)) AS first_url
+              FROM recipes
+          ),
+          ranked_categories AS (
+              SELECT
+                  cr.recipecategory,
+                  i.first_url AS url,
+                  ROW_NUMBER() OVER (PARTITION BY cr.recipecategory ORDER BY cr.recipeID) AS row_num
+              FROM category_ratings cr
+                        JOIN recipes r ON cr.recipeID = r.recipeID
+                        JOIN image_links i ON cr.recipeid = i.recipeid
+          )
+      SELECT recipecategory,
+            CASE WHEN url='' THEN 'https://i.ibb.co/W5WM4v8/maskable-icon-removebg-preview.png'
+              ELSE url END AS url
+      FROM ranked_categories
+      WHERE row_num = 1
+      LIMIT $1 OFFSET $2
+      `
+      , [pageSize, offset]
+      , (err, data) => {
       if (err) {
         console.log(err);
         res.json([]);
@@ -333,76 +407,106 @@ const category_tops = async function(req, res) {
 // CATEGORY INFO: Display the recipes for each category in the order of 
 // descending rating (like AlbumInfo page)
 // URL: http://localhost:8080/category_info/Asian
-
 const category_info = async function(req, res) {
   // pagination
-  const page = req.query.page;
-  const pageSize = req.query.page_size ? req.query.page_size : 10;
-  const inputCategory = req.params.category;
+  const page = parseInt(req.query.page); // Ensure it's a number
+  const pageSize = parseInt(req.query.page_size ?? 10);
+  const inputCategory = req.params.recipecategory;
 
-  if(!page) {
-    connection.query(`
-      WITH category_ratings AS (
+  // Validate inputs
+  if (!inputCategory) {
+    return res.status(400).json({ error: 'Category is required' });
+  }
+
+  try {
+    if(!page) {
+      connection.query(`
+        WITH category_ratings AS (
+          SELECT
+              r.recipecategory,
+              r.recipeID,
+              r.name AS recipename,
+              ROUND(AVG(re.rating), 2) AS avgrating,
+              COUNT(re.ReviewID) AS reviewcount
+          FROM recipes r
+          JOIN reviews re ON r.recipeID = re.recipeID
+          GROUP BY r.recipecategory, r.recipeID, r.name
+        )
         SELECT
-            r.recipecategory,
-            r.recipeID,
-            r.name AS RecipeName,
-            ROUND(AVG(re.rating), 2) AS AvgRating,
-            COUNT(re.ReviewID) AS ReviewCount
-        FROM recipes r
-        JOIN reviews re ON r.recipeID = re.recipeID
-        GROUP BY r.recipecategory, r.recipeID, r.name
-      )
-      SELECT
-        cr.recipecategory,
-        cr.RecipeName,
-        cr.AvgRating,
-        cr.ReviewCount
-      FROM category_ratings cr
-      WHERE cr.recipecategory = $1
-      ORDER BY cr.AvgRating DESC, cr.ReviewCount DESC
-      `, [inputCategory], (err, data) => {
-      if (err) {
-        console.log(err);
-        res.json([]);
-      } else {
-        res.json(data.rows);
+          cr.recipecategory,
+          cr.recipeid,
+          cr.recipename,
+          cr.avgrating,
+          cr.reviewcount
+        FROM category_ratings cr
+        WHERE cr.recipecategory = $1
+        ORDER BY cr.avgrating DESC, cr.reviewcount DESC
+        `, [inputCategory], (err, data) => {
+        if (err) {
+          console.error('Query error:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        
+        if (!data || !data.rows) {
+          console.error('No data returned');
+          return res.status(404).json({ error: 'No data found' });
+        }
+
+        console.log('Sending data:', data.rows); // Debug log
+        return res.json(data.rows);
+      });
+    } else {
+      const offset = (page - 1) * pageSize;
+      
+      if (offset < 0) {
+        return res.status(400).json({ error: 'Invalid page number' });
       }
-    });
-  } else {
-    const offset = (page - 1) * pageSize;
-    connection.query(`
-      WITH category_ratings AS (
+
+      connection.query(`
+        WITH category_ratings AS (
+          SELECT
+              r.recipecategory,
+              r.recipeID,
+              r.name AS RecipeName,
+              AVG(re.rating) AS avgrating,
+              COUNT(re.ReviewID) AS reviewcount
+          FROM recipes r
+          JOIN reviews re ON r.recipeID = re.recipeID
+          GROUP BY r.recipecategory, r.recipeID, r.name
+        )
         SELECT
-            r.recipecategory,
-            r.recipeID,
-            r.name AS RecipeName,
-            AVG(re.rating) AS AvgRating,
-            COUNT(re.ReviewID) AS ReviewCount
-        FROM recipes r
-        JOIN reviews re ON r.recipeID = re.recipeID
-        GROUP BY r.recipecategory, r.recipeID, r.name
-      )
-      SELECT
-        cr.recipecategory,
-        cr.RecipeName,
-        cr.AvgRating,
-        cr.ReviewCount
-      FROM category_ratings cr
-      WHERE cr.recipecategory = $1
-      ORDER BY cr.AvgRating DESC, cr.ReviewCount DESC
-      LIMIT ${pageSize}
-      OFFSET ${offset};
-      `, [inputCategory], (err, data) => {
-      if (err) {
-        console.log(err);
-        res.json([]);
-      } else {
-        res.json(data.rows);
-      }
-    });  
+          cr.recipecategory,
+          cr.recipeid,
+          cr.recipename,
+          cr.avgrating,
+          cr.reviewcount
+        FROM category_ratings cr
+        WHERE cr.recipecategory = $1
+        ORDER BY cr.avgrating DESC, cr.reviewcount DESC
+        LIMIT ${pageSize}
+        OFFSET ${offset};
+        `, [inputCategory], (err, data) => {
+        if (err) {
+          console.error('Query error:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        
+        if (!data || !data.rows) {
+          console.error('No data returned');
+          return res.status(404).json({ error: 'No data found' });
+        }
+
+        console.log('Sending data:', data.rows); // Debug log
+        return res.json(data.rows);
+      });  
+    }
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return res.status(500).json({ error: 'Server error' });
   }
 }
+
+
 
 // Route 7: Get top contributors
 const getTopContributors = async function (req, res) {
