@@ -13,6 +13,7 @@ app.use(cors({
 app.get('/random', routes.random);
 app.get('/search_recipe', routes.search_recipe)
 app.get('/recipe/:recipeid', routes.recipe);
+app.get('/all_ingredients', routes.all_ingredients);
 app.get('/ingredient_info/:ingredient', routes.ingredient_info)
 app.get('/category_tops/:category', routes.category_tops);
 app.get('/category_info/:category', routes.category_info);

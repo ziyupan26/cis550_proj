@@ -25,75 +25,82 @@ connection.connect((err) => err && console.log(err));
 // Route 1: GET /random
 // Given the current month, return a random recipe that is related to the month
 const random = async function(req, res) {
+  // Create a dictionary to map month to related keyword list
+  const monthKeyword = {
+      1: ["Winter", "Snow", "New Year", "Family"],
+      2: ["Winter", "Valentine", "Love", "Snow"],
+      3: ["Spring", "Grow", "Flowers", "Green"],
+      4: ["Spring", "Flowers", "Growth", "Healthy"],
+      5: ["Spring", "Flowers", "Warm", "Blossom", "Healthy"],
+      6: ["Summer", "Sun", "Chill", "Vacation", "Cool", "< 60 Mins"],
+      7: ["Summer", "Cool", "Holiday", "Vacation", "Healthy"],
+      8: ["Summer", "Vacation", "Sunshine", "Relax"],
+      9: ["Autumn", "Fruit", "Soup", "Apple", "Oven", "Easy"],
+      10: ["Autumn", "Pumpkin", "Healthy", "Halloween", "Grains"],
+      11: ["Autumn", "Thanksgiving", "< 60 Mins", "Oven"],
+      12: ["Poultry", "Meat", "Holiday", "Christmas", "< 4 Hours"]
+  };
 
-    // create a dictionary to map month to related keyword list
-    const monthKeyword = {
-        1: ["Winter", "Snow", "New Year", "Family"],
-        2: ["Winter", "Valentine", "Love", "Snow"],
-        3: ["Spring", "Grow", "Flowers", "Green"],
-        4: ["Spring", "Flowers", "Growth", "Healthy"],
-        5: ["Spring", "Flowers", "Warm", "Blossom", "Healthy"],
-        6: ["Summer", "Sun", "Chill", "Vacation", "Cool", "< 60 Mins"],
-        7: ["Summer", "Cool", "Holiday", "Vacation", "Healthy"],
-        8: ["Summer", "Vacation", "Sunshine", "Relax"],
-        9: ["Autumn", "Fruit", "Soup", "Apple", "Oven", "Easy"],
-        10: ["Autumn", "Pumpkin", "Healthy", "Halloween", "Grains"],
-        11: ["Autumn", "Thanksgiving", "< 60 Mins", "Oven"],
-        12: ["Poultry", "Meat", "Holiday", "Christmas", "< 4 Hours"]
-    };
+  // Check the time of access and determine the month
+  const currentMonth = new Date().getMonth() + 1;
+  const currKeywords = monthKeyword[currentMonth];
+  const conditions = currKeywords.map(k => `keywords LIKE '%${k}%'`).join(' OR ');
 
-    // check the time of access and determine the month
-    // Get the current month and corresponding keywords
-    const currentMonth = new Date().getMonth() + 1;
-    const currKeywords = monthKeyword[currentMonth];
-    const conditions = currKeywords.map(k => `keywords LIKE '%${k}%'`).join(' OR ');
-    
-    // connection.query() function takes three main parameters: 
-        // query string;
-        // an array of values to replace the placeholders in the query string, each value corresponds to a placeholder (e.g., $1, $2);
-        // a callback Function (optional): A function that handles the results of the query.
-    connection.query(`
-        SELECT *
-        FROM recipes
-        WHERE ${conditions}
-        ORDER BY RANDOM()
-        LIMIT 1
-    `, (err, data) => {
+  connection.query(`
+      SELECT *
+      FROM recipes rc
+      LEFT JOIN (
+          SELECT recipeid, ROUND(AVG(rating), 2) AS avg_rate, COUNT(review) AS review_count
+          FROM reviews
+          GROUP BY recipeid
+      ) a ON rc.recipeid = a.recipeid
+      WHERE (${conditions}) AND images IS NOT NULL
+      ORDER BY RANDOM()
+      LIMIT 1
+  `, (err, data) => {
       if (err) {
-        // If there is an error for some reason, print the error message and
-        // return an empty object instead
-        console.log(err);
-        // Be cognizant of the fact we return an empty object {}. For future routes, depending on the
-        // return type you may need to return an empty array [] instead.
-        res.json({});
-      } else {
-        // log the row
-        console.log(data.rows[0]);
-        let images = data.rows[0].images || [];
-        // Convert stringified array to an actual array
-        if (typeof images === 'string') {
-        images = images.replace(/'/g, '"'); // Replace single quotes with double quotes
-        try {
-            images = JSON.parse(images); // Parse the modified string as JSON
-        } catch (error) {
-            console.error('Error parsing images:', error);
-            images = []; // Default to an empty array if parsing fails
-        }
-        }
+          // Log the error and return an empty object if the query fails
+          console.error(err);
+          res.json({});
+      } else if (data.rows.length > 0) {
+          let images = data.rows[0].images || [];
+          
+          // Parse the images array if it is a string
+          if (typeof images === 'string') {
+              images = images.replace(/'/g, '"'); // Replace single quotes with double quotes
+              try {
+                  images = JSON.parse(images); // Parse the modified string as JSON
+              } catch (error) {
+                  console.error('Error parsing images:', error);
+                  images = []; // Default to an empty array if parsing fails
+              }
+          }
 
-        // Get the last image, or set to null if images array is empty
-        const lastImage = images && images.length > 0 ? images[images.length - 1] : null;
-        res.json({
-            // return the recipe name, picture, and description of the recipe
-            name: data.rows[0].name,
-            description: data.rows[0].description,
-            // last image in the images array
-            // image: data.rows[0].images[data.rows[0].images.length - 1],
-            image: lastImage 
-        });
+          // Get the last image, or set to null if images array is empty
+          const lastImage = images.length > 0 ? images[images.length - 1] : null;
+
+          res.json({
+              // Return all required recipe details
+              name: data.rows[0].name,
+              description: data.rows[0].description,
+              authorname: data.rows[0].authorname,
+              recipecategory: data.rows[0].recipecategory,
+              cooktime: data.rows[0].cooktime,
+              preptime: data.rows[0].preptime,
+              calories: data.rows[0].calories,
+              ingredients: data.rows[0].ingredients ? JSON.parse(data.rows[0].ingredients) : [],
+              instructions: data.rows[0].instructions || "No instructions provided.",
+              avg_rate: data.rows[0].avg_rate || "N/A",
+              review_count: data.rows[0].review_count || 0,
+              image: lastImage,
+          });
+      } else {
+          // Return an empty object if no rows are found
+          res.json({});
       }
-    });
-  }
+  });
+};
+
 
 
 // Route 2: GET /search_recipe
@@ -231,6 +238,25 @@ const recipe = async function(req, res) {
     }
   )
 }
+// ROUTE 4.1: GET /all_ingredients
+const all_ingredients = async function(req, res) {
+  // Show an ingredient (e.g. peanuts), including its energy per kcalcory,
+  // protein per g, fat per g, carbon per g, fiber per mg, sugar per g, Vitamin (A, B6, B12, C, D2, E)
+  // test: http://localhost:8080/all_ingredients
+  connection.query(`
+    SELECT UPPER(LEFT(im.ingredient, 1)) || SUBSTR(ingredient, 2) AS name
+    FROM ingredients_matching im
+    ORDER BY name
+    `,
+    (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
 
 // ROUTE 4: GET /ingredient_info/:ingredient
 const ingredient_info = async function(req, res) {
@@ -244,7 +270,7 @@ const ingredient_info = async function(req, res) {
     vitamcg, vitemg, vitd2mcg
     FROM ingredients_matching im
     JOIN ingredients i ON i.ndbno = im.ndbno
-    WHERE im.ingredient = $1
+    WHERE im.ingredient ILIKE $1
     `, 
     [ingredient],
     (err, data) => {
@@ -666,7 +692,7 @@ const preparation_time = async function(req, res) {
   }
 }
 
-// ROUTE 11: GET /calculate_nutrition/:ingredient
+// ROUTE 11: GET /calculate_nutrition/:nutritionType/:ingredients
 // Calculate the total value of a specific nutrition (user input) of a list of ingredients (user input)
 // Test URL: http://localhost:8080/calculate_nutrition/energyKcal/egg,flour,milk
 //           http://localhost:8080/calculate_nutrition/proteinG/blueberries,butter,flour,sugar
@@ -847,6 +873,7 @@ const seasonal_recipe = async function(req, res) {
     random,
     search_recipe,
     recipe,
+    all_ingredients,
     ingredient_info,
     category_tops,
     category_info,
