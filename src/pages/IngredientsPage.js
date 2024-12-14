@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Container, Link, Stack, Grid, Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Container, Link, Stack, Grid, Box, TextField, Button, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import IngredientCard from '../components/IngredientCard';  // Ensure this path is correct for your project
 
 const config = require('../config.json');
 
 
 export default function IngredientListPage() {
-  const [ingredientData, setIngredientData] = useState([]);
-  const [selectedIngredientName, setSelectedIngredientName] = useState(null);
+  const [ingredientData, setIngredientData] = useState([]); // ingredient list
+  const [selectedIngredientName, setSelectedIngredientName] = useState(null); // select item
+  const [searchTerm, setSearchTerm] = useState(''); // search item
+  const [triggerSearch, setTriggerSearch] = useState(false); // state to track "Go" button click
+
 
   useEffect(() => {
     // Fetch ingredients list from the backend route
@@ -21,6 +24,11 @@ export default function IngredientListPage() {
     const firstChar = ingredient.name.charAt(0);
     return firstChar !== '&';
   });
+
+  // Filter for search functionality
+  const matchingIngredient = filteredIngredients.find((ingredient) =>
+    ingredient.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // store numeric-starting ingredients separately
   const numericGroup = [];
@@ -42,8 +50,8 @@ export default function IngredientListPage() {
     return acc;
   }, {});
 
-    // Sort the letters alphabetically
-    const letters = Object.keys(groupedIngredients).sort();
+  // Sort the letters alphabetically
+  const letters = Object.keys(groupedIngredients).sort();
 
   return (
     <Container>
@@ -54,6 +62,8 @@ export default function IngredientListPage() {
           handleClose={() => setSelectedIngredientName(null)}
         />
       )}
+
+
       <Stack direction='column' spacing={2} style={{ marginTop: '40px' }}>
         <h1 style={{
           fontFamily: 'Georgia, serif',
@@ -69,9 +79,79 @@ export default function IngredientListPage() {
           marginBottom: '25px',
         }}>
           Click on an ingredient to view details.</p>
+
+      {/* Search bar */}  
+      <Stack direction="row" spacing={2} sx={{ paddingBottom: '40px' }}>
+      <TextField
+        fullWidth
+        variant="outlined"
+        placeholder="Search for an ingredient..."
+        value={searchTerm}
+        onChange={(e) => {
+          const input = String(e.target.value); // convert input to string
+          setSearchTerm(input)}}
+      />
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={() => {
+          // Trim the spaces between words when button is clicked
+          const trimmedSearchTerm = searchTerm.trim();
+          setSearchTerm(trimmedSearchTerm);
+          setTriggerSearch(true)}} // Set triggerSearch to true when clicked
+        disabled={!searchTerm.trim()} // Disable the button if the search term is empty
+      >
+        Go
+      </Button>
+    </Stack>
+
+        {/* Show IngredientCard if a search term matches */}
+        {triggerSearch && searchTerm && matchingIngredient && (
+          <IngredientCard
+            ingredientName={searchTerm}
+            handleClose={() => {
+              setTriggerSearch(false);
+              setSearchTerm('')
+            }} // Clear search when card is closed and reset trigger
+          />
+        )}
         
+        {/* Alphabet Navigation Bar */}
+        <Box
+          sx={{
+            paddingBottom: '60px', // Adjust space below the navigation bar
+            textAlign: 'center',
+            position: 'relative',
+            left: '-20px', // Move the navigation bar to the left
+          }}
+        >
+          {letters.map(letter => (
+            <Link
+              key={letter}
+              href={`#${letter}`} // Link to the section with this letter
+              sx={{
+                margin: '5px',
+                padding: '8px 12px',
+                textDecoration: 'none',
+                border: '1px solid orange',
+                borderRadius: '4px',
+                color: 'black',
+                fontWeight: 'bold',
+                fontFamily: 'Georgia, serif',
+                '&:hover': {
+                  backgroundColor: 'orange',
+                  color: 'white',
+                },
+              }}
+            >
+              {letter}
+            </Link>
+          ))}
+        </Box>
+
+        {/* Grouped Ingredients */}
         {letters.map((letter) => (
-          <div key={letter} style={{ marginBottom: '40px' }}>
+          <div key={letter} id={letter} style={{ marginBottom: '40px' }}>
             {/* Box for the letter */}
             <Box
               sx={{
@@ -84,7 +164,7 @@ export default function IngredientListPage() {
                 textAlign: 'center',
                 width: 'fit-content',
                 marginBottom: '20px',
-                fontFamily: 'Georgia, serif', // Change the font family
+                fontFamily: 'Georgia, serif',
                 fontSize: '24px', // Change the font size
               }}
             >

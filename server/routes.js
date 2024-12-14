@@ -263,7 +263,7 @@ const ingredient_info = async function(req, res) {
     vitamcg, vitemg, vitd2mcg
     FROM ingredients_matching im
     JOIN ingredients i ON i.ndbno = im.ndbno
-    WHERE im.ingredient = $1
+    WHERE im.ingredient ILIKE $1
     `, 
     [ingredient],
     (err, data) => {

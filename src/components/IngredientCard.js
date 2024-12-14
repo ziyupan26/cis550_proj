@@ -8,14 +8,68 @@ export default function IngredientCard({ ingredientName, handleClose }) {
   const [ingredientData, setIngredientData] = useState({});
   const [barRadar, setBarRadar] = useState(true);
   const [tabValue, setTabValue] = useState(0);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch(`http://${config.server_host}:${config.server_port}/ingredient_info/${ingredientName}`)
-      .then(res => res.json())
+    const lowerIngredientName = ingredientName.toLowerCase();
+    const url = `http://${config.server_host}:${config.server_port}/ingredient_info/${lowerIngredientName}`;
+  
+    fetch(url)
+      .then(async res => {
+        console.log('Response status:', res.status, 'Response headers:', res.headers);
+        const text = await res.text(); // Capture raw response
+        console.log('Raw response:', text);
+        if (!res.ok || !text) {
+          throw new Error('Empty response from server');
+        }
+        return JSON.parse(text); // Parse JSON
+      })
       .then(data => {
+        console.log('Fetched data:', data);
+        setError(false);
         setIngredientData(data);
+      })
+      .catch(err => {
+        console.error('Error fetching ingredient data:', err.message || err);
+        setError(true);
+        setIngredientData(null);
       });
   }, [ingredientName]);
+
+  if (!ingredientData && !error) {
+    return null; // avoid rendering anything while data is loading
+  }
+
+  // Display error message inside the modal
+  if (error) {
+    return (
+      <Modal
+        open={true}
+        onClose={handleClose}
+        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+      >
+        <Box
+          p={3}
+          style={{ background: 'white', borderRadius: '16px', border: '2px solid #000', width: 400 }}
+        >
+          <Typography variant="h6" color="error" gutterBottom>
+            No data available for this ingredient.
+          </Typography>
+          <Typography variant="body1" gutterBottom>
+            Please select a different ingredient.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleClose}
+            style={{ display: 'block', margin: '0 auto' }}
+          >
+            Close
+          </Button>
+        </Box>
+      </Modal>
+    );
+  }
 
   // Non-vitamin attributes: Energy, Protein, Fat, Carbs, Sugar
   const nonVitaminData = [

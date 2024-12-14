@@ -88,7 +88,7 @@ export default function NavBar() {
               Categories
             </NavLink>
             <NavLink
-              to="/songs"
+              to="/all_ingredients"
               style={{
                 color: 'inherit',
                 textDecoration: 'none',
@@ -96,7 +96,7 @@ export default function NavBar() {
                 fontFamily: 'Garamond'
               }}
             >
-              Ingredient
+              Ingredients
             </NavLink>
             <NavLink
               to="/songs"
