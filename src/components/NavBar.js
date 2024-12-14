@@ -35,8 +35,7 @@ import logo from './maskable_icon-removebg-preview.png';
 // props to how it changes the look of the component.
 export default function NavBar() {
   return (
-    // <AppBar position='static'>
-    <AppBar position="sticky">
+    <AppBar position='static'>
       <Container maxWidth='xl'>
         <Toolbar disableGutters>
           {/* <NavText href='/' text='SWIFTIFY' isMain />
@@ -72,13 +71,13 @@ export default function NavBar() {
                 color: 'inherit',
                 textDecoration: 'none',
                 marginRight: '30px',
-                fontFamily: 'Papyrus'
+                fontFamily: 'Papyrus',
               }}
             >
               RecipeFinder
             </NavLink>
             <NavLink
-              to="/albums"
+              to="/category_tops"
               style={{
                 color: 'inherit',
                 textDecoration: 'none',
@@ -89,7 +88,7 @@ export default function NavBar() {
               Categories
             </NavLink>
             <NavLink
-              to="/songs"
+              to="/all_ingredients"
               style={{
                 color: 'inherit',
                 textDecoration: 'none',
@@ -97,15 +96,15 @@ export default function NavBar() {
                 fontFamily: 'Garamond'
               }}
             >
-              Ingredient
-            </NavLink>
+              Ingredients
+              </NavLink>
             <NavLink
-              to="/songs"
+              to="/calculator"
               style={{
                 color: 'inherit',
                 textDecoration: 'none',
                 marginRight: '30px',
-                fontFamily: 'Garamond'
+                fontFamily: 'Garamond',
               }}
             >
               Calculator
