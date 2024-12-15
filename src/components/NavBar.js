@@ -3,36 +3,6 @@ import { AppBar, Box, Container, Toolbar, Typography } from '@mui/material'
 import { NavLink } from 'react-router-dom';
 import logo from './maskable_icon-removebg-preview.png';
 
-// The hyperlinks in the NavBar contain a lot of repeated formatting code so a
-// helper component NavText local to the file is defined to prevent repeated code.
-// function NavText({ href, text, isMain }) {
-//   return (
-//     <Typography
-//       variant={isMain ? 'h5' : 'h7'}
-//       noWrap
-//       style={{
-//         marginRight: '30px',
-//         fontFamily: 'monospace',
-//         fontWeight: 700,
-//         letterSpacing: '.3rem',
-//       }}
-//     >
-//       <NavLink
-//         to={href}
-//         style={{
-//           color: 'inherit',
-//           textDecoration: 'none',
-//         }}
-//       >
-//         {text}
-//       </NavLink>
-//     </Typography>
-//   )
-// }
-
-// Here, we define the NavBar. Note that we heavily leverage MUI components
-// to make the component look nice. Feel free to try changing the formatting
-// props to how it changes the look of the component.
 export default function NavBar() {
   return (
     // <AppBar position='static'>
@@ -78,7 +48,7 @@ export default function NavBar() {
               RecipeFinder
             </NavLink>
             <NavLink
-              to="/albums"
+              to="/category_tops"
               style={{
                 color: 'inherit',
                 textDecoration: 'none',
@@ -89,7 +59,7 @@ export default function NavBar() {
               Categories
             </NavLink>
             <NavLink
-              to="/songs"
+              to="/all_ingredients"
               style={{
                 color: 'inherit',
                 textDecoration: 'none',
@@ -97,10 +67,10 @@ export default function NavBar() {
                 fontFamily: 'Garamond'
               }}
             >
-              Ingredient
+              Ingredients
             </NavLink>
             <NavLink
-              to="/songs"
+              to="/calculator"
               style={{
                 color: 'inherit',
                 textDecoration: 'none',
@@ -117,3 +87,4 @@ export default function NavBar() {
     </AppBar>
   );
 }
+
