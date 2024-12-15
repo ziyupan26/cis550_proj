@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Container, Grid, Slider, TextField } from '@mui/material';
 import RecipeCard from '../components/RecipeCard';
+import { useNavigate } from 'react-router-dom'; // For navigation to search results page
 const config = require('../config.json');
 
 export default function HomePage() {
+  const navigate = useNavigate(); // Initialize navigation hook
+
   // State for Star Recipe of the Month
   const [starRecipe, setStarRecipe] = useState(null);
   const [showRecipeCard, setShowRecipeCard] = useState(false);
@@ -15,7 +18,6 @@ export default function HomePage() {
   const [prepTime, setPrepTime] = useState([0, 120]);
   const [calories, setCalories] = useState([0, 1000]);
   const [rating, setRating] = useState([0, 5]);
-  const [searchResults, setSearchResults] = useState([]);
 
   // State for Top Contributors
   const [topContributors, setTopContributors] = useState([]);
@@ -29,7 +31,14 @@ export default function HomePage() {
     }
   }, [starRecipe]);
 
-  // Fetch Search Results
+  // Fetch Top Contributors
+  useEffect(() => {
+    fetch(`http://${config.server_host}:${config.server_port}/top_contributors`)
+      .then((res) => res.json())
+      .then((data) => setTopContributors(data));
+  }, []);
+
+  // Navigate to Search Results Page with Query Parameters
   const searchRecipes = () => {
     const query = new URLSearchParams({
       ingredients: ingredient,
@@ -44,17 +53,8 @@ export default function HomePage() {
       avg_rate_high: rating[1],
     }).toString();
 
-    fetch(`http://${config.server_host}:${config.server_port}/search_recipe?${query}`)
-      .then((res) => res.json())
-      .then((data) => setSearchResults(data));
+    navigate(`/search_results?${query}`);
   };
-
-  // Fetch Top Contributors
-  useEffect(() => {
-    fetch(`http://${config.server_host}:${config.server_port}/top_contributors`)
-      .then((res) => res.json())
-      .then((data) => setTopContributors(data));
-  }, []);
 
   return (
     <Container style={{ padding: '20px' }}>
@@ -148,7 +148,7 @@ export default function HomePage() {
 
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
           <Button
-            onClick={() => searchRecipes()}
+            onClick={searchRecipes}
             style={{
               backgroundColor: '#FF8A65',
               color: '#fff',
