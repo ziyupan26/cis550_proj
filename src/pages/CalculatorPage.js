@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { AppBar, Box, Container,Paper,Stack,TextField,Button,Select,MenuItem,OutlinedInput  } from '@mui/material'
+import React, { useEffect } from 'react';
+import { Box, Stack,TextField,Button,Select,MenuItem,OutlinedInput } from '@mui/material'
 import { styled } from '@mui/material/styles';
 import {calculateNutrition} from '../helpers/api.js'
 
@@ -53,7 +53,7 @@ export default function CalculatorPage() {
 	const [type, setType] = React.useState('');
 	const [ingre,setIngre] = React.useState('');
 	const [result,setResult] = React.useState("");
-	const [nutritions,setNutritions]=useState([]);
+	// const [nutritions,setNutritions]=useState([]);
 	  const handleChange = (event) => {
 	    setType(event.target.value);
 	  };
