@@ -120,10 +120,10 @@ const random = async function (req, res) {
 
 // Route 2: GET /search_recipe
 const search_recipe = async function (req, res) {
-  // Search recipe through ingredients, filter by cook time, prep time,
-  // review rating, and show the recipe in order of descending rating, 
-  // review count and submitted time
-  // test: http://localhost:8080/search_recipe?ingredients=egg
+  // Search recipes through ingredients, filter by cook time, prep time, rating, calories,
+  // and exclude unwanted ingredients, then sort by rating, review count, and date.
+
+  // Query parameters with default values
   const ingredients = req.query.ingredients ?? '';
   const cooktimeLow = req.query.cooktime_low ?? 0;
   const cooktimeHigh = req.query.cooktime_high ?? 120;
@@ -135,78 +135,131 @@ const search_recipe = async function (req, res) {
   const caloriesHigh = req.query.calories_high ?? 10000;
   const unwant = req.query.unwant ?? '';
 
-  const queryParams = [];
+  const queryParams = []; // Store parameters for parameterized query
+
+  // Base query with CTE for average rating
   let query = `
-  WITH avg_rate AS (
-    SELECT recipeid, TO_CHAR(datesubmitted, 'YYYY-MM-DD') date, 
-    ROUND(AVG(rating),2) avg_rate, COUNT(review) review_count
-    FROM reviews
-    GROUP BY recipeid, datesubmitted
-  )
-  SELECT DISTINCT rc.recipeid, rc.name, rc.authorname, rc.description, rc.recipecategory,
-  a.avg_rate, a.review_count, date
-  FROM recipes rc
-  JOIN avg_rate a ON rc.recipeid = a.recipeid
-  WHERE 1=1
+    WITH avg_rate AS (
+      SELECT recipeid, TO_CHAR(datesubmitted, 'YYYY-MM-DD') AS date, 
+             ROUND(AVG(rating), 2) AS avg_rate, COUNT(review) AS review_count
+      FROM reviews
+      GROUP BY recipeid, datesubmitted
+    )
+    SELECT DISTINCT rc.recipeid, rc.name, rc.authorname, rc.description, rc.recipecategory,
+           rc.images, rc.ingredients, rc.recipeinstructions AS instructions, 
+           a.avg_rate, a.review_count, a.date
+    FROM recipes rc
+    JOIN avg_rate a ON rc.recipeid = a.recipeid
+    WHERE 1=1
   `;
 
-  if (ingredients){
-    query += ` AND ingredients LIKE $${queryParams.length + 1}`;
+  // Apply filters dynamically based on query parameters
+  if (ingredients) {
+    query += ` AND rc.ingredients ILIKE $${queryParams.length + 1}`;
     queryParams.push(`%${ingredients}%`);
   }
-  if (cooktimeLow){
-    query += ` AND cooktime >= $${queryParams.length + 1}`;
+  if (cooktimeLow) {
+    query += ` AND rc.cooktime >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(cooktimeLow));
   }
-  if (cooktimeHigh){
-    query += ` AND cooktime <= $${queryParams.length + 1}`;
+  if (cooktimeHigh) {
+    query += ` AND rc.cooktime <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(cooktimeHigh));
   }
-  if (preptimeLow){
-    query += ` AND preptime >= $${queryParams.length + 1}`;
+  if (preptimeLow) {
+    query += ` AND rc.preptime >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(preptimeLow));
   }
-  if (preptimeHigh){
-    query += ` AND preptime <= $${queryParams.length + 1}`;
+  if (preptimeHigh) {
+    query += ` AND rc.preptime <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(preptimeHigh));
   }
-  if (ratingLow){
+  if (ratingLow) {
     query += ` AND a.avg_rate >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(ratingLow));
   }
-  if (ratingHigh){
+  if (ratingHigh) {
     query += ` AND a.avg_rate <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(ratingHigh));
   }
-  if (caloriesLow){
-    query += ` AND calories >= $${queryParams.length + 1}`;
+  if (caloriesLow) {
+    query += ` AND rc.calories >= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(caloriesLow));
   }
-  if (caloriesHigh){
-    query += ` AND calories <= $${queryParams.length + 1}`;
+  if (caloriesHigh) {
+    query += ` AND rc.calories <= $${queryParams.length + 1}`;
     queryParams.push(parseFloat(caloriesHigh));
   }
-  if (unwant){
+  if (unwant) {
     query += ` AND NOT EXISTS (
         SELECT 1
         FROM ingredients_matching im
         WHERE im.ingredient = $${queryParams.length + 1}
-          AND rc.recipeingredientparts LIKE '%' || im.ingredient || '%'
+          AND rc.ingredients LIKE '%' || im.ingredient || '%'
     )`;
     queryParams.push(unwant);
   }
 
+  // Sorting the results
   query += ` ORDER BY a.avg_rate DESC, a.review_count DESC, a.date DESC`;
 
-  connection.query(query, queryParams, (err,data)=>{
+  // Execute the query
+  connection.query(query, queryParams, (err, data) => {
     if (err) {
-      console.log(err);
-      res.json({});
+      console.error("Error executing search query:", err);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else if (data.rows.length > 0) {
+      const results = data.rows.map((row) => {
+        let images = row.images || [];
+        let ingredients = row.ingredients || [];
+
+        // Safely parse `images` as JSON
+        if (typeof images === "string") {
+          try {
+            console.log("Raw images value before parsing:", images);
+            images = images.replace(/'/g, '"'); // Replace single quotes with double quotes
+            images = JSON.parse(images);
+          } catch (err) {
+            console.error("Error parsing images JSON:", err);
+            images = []; // Default to empty array
+          }
+        }
+
+        // Safely parse `ingredients` as JSON
+        if (typeof ingredients === "string") {
+          try {
+            console.log("Raw ingredients value before parsing:", ingredients);
+            ingredients = ingredients.replace(/'/g, '"'); // Replace single quotes with double quotes
+            ingredients = JSON.parse(ingredients);
+          } catch (err) {
+            console.error("Error parsing ingredients JSON:", err);
+            ingredients = []; // Default to empty array
+          }
+        }
+
+        return {
+          recipeid: row.recipeid,
+          name: row.name,
+          description: row.description,
+          authorname: row.authorname,
+          recipecategory: row.recipecategory,
+          avg_rate: row.avg_rate || "N/A",
+          review_count: row.review_count || 0,
+          date: row.date,
+          images: images.length > 0 ? images[0] : null, // Return the first image
+          ingredients: ingredients,
+          instructions: row.instructions || "No instructions provided.",
+        };
+      });
+
+      res.json(results);
     } else {
-      res.json(data.rows);
+      // Return empty response if no rows are found
+      res.json([]);
     }
-  })
-}
+  });
+};
+
 
 /********************************
  * RECIPE INFO ROUTES *
