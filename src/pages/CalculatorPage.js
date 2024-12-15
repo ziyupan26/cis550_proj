@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, Stack,TextField,Button,Select,MenuItem,OutlinedInput } from '@mui/material'
+import { Box, Stack,TextField,Button,Select,MenuItem,OutlinedInput, Card, CardContent, Typography } from '@mui/material'
 import { styled } from '@mui/material/styles';
 import {calculateNutrition} from '../helpers/api.js'
 
@@ -107,7 +107,21 @@ export default function CalculatorPage() {
 		 			justifyContent: "center",
 		 			alignItems: "center",
 		  }}>
-		 		name:{type}&nbsp;&nbsp;&nbsp;&nbsp;value:{result}
+		 	<Card sx={{ 
+				minWidth: 275,
+				backgroundColor: '#FFF8E1',   // card background color 
+				color: '#333333',             // text color inside the card
+				padding: '16px',              // add some padding if you want 
+				}}>
+				<CardContent>
+					<Typography variant="h6" component="div">
+						Nutrition Type: {type}
+					</Typography>
+					<Typography variant="h6" component="div" sx={{ mt: 3 }}>
+						Value: {result}
+					</Typography>
+				</CardContent>
+			</Card>
 		 </Stack>
         </Stack>
       </Box>

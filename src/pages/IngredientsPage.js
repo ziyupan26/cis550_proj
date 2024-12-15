@@ -81,22 +81,23 @@ export default function IngredientListPage() {
           Click on an ingredient to view details.</p>
 
       {/* Search bar */}  
-      <Stack direction="row" spacing={2} sx={{ paddingBottom: '40px' }}>
+      <Stack direction="row" spacing={2} sx={{ 
+        paddingBottom: '40px',
+        color: '#FFE0B2',
+        }}>
       <TextField
         fullWidth
         variant="outlined"
         placeholder="Search for an ingredient..."
         value={searchTerm}
-        onChange={(e) => {
-          const input = String(e.target.value); // convert input to string
-          setSearchTerm(input)}}
+        onChange={(e) => { setSearchTerm(e.target.value) }}
       />
       <Button
         variant="contained"
         color="primary"
         onClick={() => {
           // Trim the spaces between words when button is clicked
-          const trimmedSearchTerm = searchTerm.trim();
+          const trimmedSearchTerm = String(searchTerm).trim();
           setSearchTerm(trimmedSearchTerm);
           setTriggerSearch(true)}} // Set triggerSearch to true when clicked
         disabled={!searchTerm.trim()} // Disable the button if the search term is empty
@@ -122,6 +123,7 @@ export default function IngredientListPage() {
             paddingBottom: '60px', // Adjust space below the navigation bar
             textAlign: 'center',
             position: 'relative',
+            color: '#FFF8E1',
             left: '-20px', // Move the navigation bar to the left
           }}
         >
@@ -133,14 +135,14 @@ export default function IngredientListPage() {
                 margin: '5px',
                 padding: '8px 12px',
                 textDecoration: 'none',
-                border: '1px solid orange',
+                border: '1px solid #5C4033',
                 borderRadius: '4px',
                 color: 'black',
                 fontWeight: 'bold',
                 fontFamily: 'Georgia, serif',
                 '&:hover': {
-                  backgroundColor: 'orange',
-                  color: 'white',
+                  backgroundColor: '#FFE0B2',
+                  color: '#5C4033',
                 },
               }}
             >
@@ -156,7 +158,7 @@ export default function IngredientListPage() {
             <Box
               sx={{
                 display: 'inline-block',
-                backgroundColor: 'black',
+                backgroundColor: '#5C4033',
                 color: 'white',
                 padding: '5px 13px',
                 borderRadius: '4px',
@@ -177,16 +179,17 @@ export default function IngredientListPage() {
                     component='button'
                     onClick={() => setSelectedIngredientName(ingredient.name)}
                     sx={{
-                      color: 'inherit',
+                      color: '#5C4033',
                       textAlign: 'left',
                       cursor: 'pointer',
                       display: 'block',
+                      fontSize: '17px',
                       transition: 'color 0.1s',
                       '&:hover': {
-                        color: 'orange', // hover color
+                        color: '#D2691E', // hover color
                       },
                       '&:active': {
-                        color: '#D2691E', // clicked color
+                        color: '#8B4513', // clicked color
                       },
                     }}
                   >
