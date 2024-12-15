@@ -16,7 +16,7 @@ const connection = new Pool({
     rejectUnauthorized: false,
   },
 });
-connection.connect((err) => err && console.log(err));
+//connection.connect((err) => err && console.log(err));
 
 
 /********************************
@@ -24,29 +24,30 @@ connection.connect((err) => err && console.log(err));
  ********************************/
 // Route 1: GET /random
 // Given the current month, return a random recipe that is related to the month
-const random = async function(req, res) {
+const random = async function (req, res) {
   // Create a dictionary to map month to related keyword list
   const monthKeyword = {
-      1: ["Winter", "Snow", "New Year", "Family"],
-      2: ["Winter", "Valentine", "Love", "Snow"],
-      3: ["Spring", "Grow", "Flowers", "Green"],
-      4: ["Spring", "Flowers", "Growth", "Healthy"],
-      5: ["Spring", "Flowers", "Warm", "Blossom", "Healthy"],
-      6: ["Summer", "Sun", "Chill", "Vacation", "Cool", "< 60 Mins"],
-      7: ["Summer", "Cool", "Holiday", "Vacation", "Healthy"],
-      8: ["Summer", "Vacation", "Sunshine", "Relax"],
-      9: ["Autumn", "Fruit", "Soup", "Apple", "Oven", "Easy"],
-      10: ["Autumn", "Pumpkin", "Healthy", "Halloween", "Grains"],
-      11: ["Autumn", "Thanksgiving", "< 60 Mins", "Oven"],
-      12: ["Poultry", "Meat", "Holiday", "Christmas", "< 4 Hours"]
+    1: ["Winter", "Snow", "New Year", "Family"],
+    2: ["Winter", "Valentine", "Love", "Snow"],
+    3: ["Spring", "Grow", "Flowers", "Green"],
+    4: ["Spring", "Flowers", "Growth", "Healthy"],
+    5: ["Spring", "Flowers", "Warm", "Blossom", "Healthy"],
+    6: ["Summer", "Sun", "Chill", "Vacation", "Cool", "< 60 Mins"],
+    7: ["Summer", "Cool", "Holiday", "Vacation", "Healthy"],
+    8: ["Summer", "Vacation", "Sunshine", "Relax"],
+    9: ["Autumn", "Fruit", "Soup", "Apple", "Oven", "Easy"],
+    10: ["Autumn", "Pumpkin", "Healthy", "Halloween", "Grains"],
+    11: ["Autumn", "Thanksgiving", "< 60 Mins", "Oven"],
+    12: ["Poultry", "Meat", "Holiday", "Christmas", "< 4 Hours"],
   };
 
   // Check the time of access and determine the month
   const currentMonth = new Date().getMonth() + 1;
   const currKeywords = monthKeyword[currentMonth];
-  const conditions = currKeywords.map(k => `keywords LIKE '%${k}%'`).join(' OR ');
+  const conditions = currKeywords.map((k) => `keywords LIKE '%${k}%'`).join(" OR ");
 
-  connection.query(`
+  connection.query(
+    `
       SELECT *
       FROM recipes rc
       LEFT JOIN (
@@ -57,50 +58,64 @@ const random = async function(req, res) {
       WHERE (${conditions}) AND images IS NOT NULL
       ORDER BY RANDOM()
       LIMIT 1
-  `, (err, data) => {
+    `,
+    (err, data) => {
       if (err) {
-          // Log the error and return an empty object if the query fails
-          console.error(err);
-          res.json({});
+        // Log the error and return an empty object if the query fails
+        console.error(err);
+        res.json({});
       } else if (data.rows.length > 0) {
-          let images = data.rows[0].images || [];
-          
-          // Parse the images array if it is a string
-          if (typeof images === 'string') {
-              images = images.replace(/'/g, '"'); // Replace single quotes with double quotes
-              try {
-                  images = JSON.parse(images); // Parse the modified string as JSON
-              } catch (error) {
-                  console.error('Error parsing images:', error);
-                  images = []; // Default to an empty array if parsing fails
-              }
+        // Parse `images`
+        let images = data.rows[0].images || [];
+        if (typeof images === "string") {
+          try {
+            console.log("Raw images value before parsing:", images);
+            images = images.replace(/'/g, '"'); // Replace single quotes with double quotes
+            images = JSON.parse(images); // Attempt to parse
+          } catch (err) {
+            console.error("Error parsing images JSON:", err);
+            images = []; // Default to empty array
           }
+        }
 
-          // Get the last image, or set to null if images array is empty
-          const lastImage = images.length > 0 ? images[images.length - 1] : null;
+        // Parse `ingredients`
+        let ingredients = data.rows[0].ingredients || [];
+        if (typeof ingredients === "string") {
+          try {
+            console.log("Raw ingredients value before parsing:", ingredients);
+            ingredients = ingredients.replace(/'/g, '"'); // Convert to valid JSON
+            ingredients = JSON.parse(ingredients); // Attempt to parse
+          } catch (err) {
+            console.error("Error parsing ingredients JSON:", err);
+            ingredients = []; // Fallback to an empty array
+          }
+        }
 
-          res.json({
-              // Return all required recipe details
-              name: data.rows[0].name,
-              description: data.rows[0].description,
-              authorname: data.rows[0].authorname,
-              recipecategory: data.rows[0].recipecategory,
-              cooktime: data.rows[0].cooktime,
-              preptime: data.rows[0].preptime,
-              calories: data.rows[0].calories,
-              ingredients: data.rows[0].ingredients ? JSON.parse(data.rows[0].ingredients) : [],
-              instructions: data.rows[0].instructions || "No instructions provided.",
-              avg_rate: data.rows[0].avg_rate || "N/A",
-              review_count: data.rows[0].review_count || 0,
-              image: lastImage,
-          });
+        // Get the last image, or set to null if images array is empty
+        const lastImage = images.length > 0 ? images[images.length - 1] : null;
+
+        res.json({
+          // Return all required recipe details
+          name: data.rows[0].name,
+          description: data.rows[0].description,
+          authorname: data.rows[0].authorname,
+          recipecategory: data.rows[0].recipecategory,
+          cooktime: data.rows[0].cooktime,
+          preptime: data.rows[0].preptime,
+          calories: data.rows[0].calories,
+          ingredients: ingredients,
+          instructions: data.rows[0].instructions || "No instructions provided.",
+          avg_rate: data.rows[0].avg_rate || "N/A",
+          review_count: data.rows[0].review_count || 0,
+          image: lastImage,
+        });
       } else {
-          // Return an empty object if no rows are found
-          res.json({});
+        // Return an empty object if no rows are found
+        res.json({});
       }
-  });
+    }
+  );
 };
-
 
 
 // Route 2: GET /search_recipe
