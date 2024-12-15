@@ -20,6 +20,8 @@ export default function RecipeCard({ recipe, handleClose }) {
           padding: '20px',
           maxWidth: '800px',
           width: '90%',
+          maxHeight: '90vh', // Set a maximum height for the card
+          overflowY: 'auto', // Enable scrolling inside the card
           boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
         }}
       >
