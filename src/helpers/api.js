@@ -1,27 +1,27 @@
-import Config from './config.json';
+import Config from '../config.json';
 
-const apiCall = (path, body, token, m) => {
-  return new Promise((resolve, reject) => {
-    fetch('http://'+Config.server_host+':' + Config.server_port + '/' + path, {
-      method: m,
-      headers: {
-        'Content-type': 'application/json',
-        Authorization: token,
-      },
-      body: JSON.stringify(body),
-    })
-      .then((response) => {
-        return response.json();
-      })
-      .then((data) => {
-        if (data.error) {
-          reject(data.error);
-        } else {
-          resolve(data);
-        }
-      });
-  });
-};
+// const apiCall = (path, body, token, m) => {
+//   return new Promise((resolve, reject) => {
+//     fetch('http://'+Config.server_host+':' + Config.server_port + '/' + path, {
+//       method: m,
+//       headers: {
+//         'Content-type': 'application/json',
+//         Authorization: token,
+//       },
+//       body: JSON.stringify(body),
+//     })
+//       .then((response) => {
+//         return response.json();
+//       })
+//       .then((data) => {
+//         if (data.error) {
+//           reject(data.error);
+//         } else {
+//           resolve(data);
+//         }
+//       });
+//   });
+// };
 
 const apiCallGet = (path, token) => {
   return new Promise((resolve, reject) => {
