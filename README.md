@@ -18,7 +18,7 @@ Our website is designed to revolutionize the way users explore, discover, and en
 >npm install        
 >npm start
 
-This help you start the backend      
+This help you start the backend.      
 
 4. Open another terminal, go to /client, run the following code:
 >cd client     
