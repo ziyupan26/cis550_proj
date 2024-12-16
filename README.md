@@ -24,26 +24,26 @@ Our website is designed to revolutionize the way users explore, discover, and en
 >>/components             
 >>>IngredientCard.js           
 >>>LazyTable.js          
-      maskable_icon-removebg-preview.png           
-      NavBar.js            
-      RecipeCard.js         
+>>>maskable_icon-removebg-preview.png           
+>>>NavBar.js            
+>>>RecipeCard.js         
 >>/helpers        
 >>>api.js        
-      formatter.js        
-      recipeimages.js            
-      recipeingredient.js           
-      recipeinstruction.js         
+>>>formatter.js        
+>>>recipeimages.js            
+>>>recipeingredient.js           
+>>>recipeinstruction.js         
 >>/pages        
 >>>CalculatorPage.js           
-      CategoryInfoPage.js         
-      CategoryPage.js       
-      HomePage.js   
-      IngredientsPage.js    
-      RecipePage.js     
-      SearchResultsPage.js    
+>>>CategoryInfoPage.js         
+>>>CategoryPage.js       
+>>>HomePage.js   
+>>>IngredientsPage.js    
+>>>RecipePage.js     
+>>>SearchResultsPage.js    
 >.gitignore     
-    package.json    
-    package-lock.json   
+>package.json    
+>package-lock.json   
 
 /server     
 >.gitignore       
