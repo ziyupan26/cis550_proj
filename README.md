@@ -7,7 +7,8 @@
 * [Ziyu Pan](https://github.com/ziyupan26)
 
 ## Description
-Our website is designed to revolutionize the way users explore, discover, and enjoy recipes. By offering a personalized experience, the platform enables users to search for recipes based on ingredients, and enjoy a wide array of additional features such as user registration, favorite recipe collections, and ratings-driven recommendations. 
+Our application, Recipe Finder, is designed to create a user-friendly and accessible platform for exploring and discovering recipes that align with users’ specific dietary needs. The website offers features that allow users to search for recipes by ingredients, filter out dishes containing allergens, learn about the nutritional value of recipes and ingredients, and gain insights of customized combinations of ingredients. With a focus on core functionality, we aim to make cooking and eating more enjoyable and healthy for everyone, from beginners to seasoned home chefs.   
+
 ![](https://i.ibb.co/800cVxL/20241215200622.png)
 
 ## Data
