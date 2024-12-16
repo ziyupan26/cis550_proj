@@ -1,4 +1,6 @@
 # CIS 550 Project of GROUP 29 -- Recipe Finder
+![](https://i.ibb.co/W5WM4v8/maskable-icon-removebg-preview.png)
+
 ## Contributors (alphabetically)
 * [Amy Fang](https://github.com/AMYFYJ)
 * [Jiayi Jiang](https://github.com/JiangJiayi32)
