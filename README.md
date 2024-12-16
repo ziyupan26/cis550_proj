@@ -1,5 +1,5 @@
 # CIS 550 Project of GROUP 29 -- Recipe Finder
-![](https://i.ibb.co/W5WM4v8/maskable-icon-removebg-preview.png)
+![](https://i.ibb.co/800cVxL/20241215200622.png)
 
 ## Contributors (alphabetically)
 * [Amy Fang](https://github.com/AMYFYJ)
