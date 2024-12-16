@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Container, Grid, Slider, TextField } from '@mui/material';
 import RecipeCard from '../components/RecipeCard';
-import { useNavigate } from 'react-router-dom'; // For navigation to search results page
+import { useNavigate } from 'react-router-dom'; // navigation to search results page
 const config = require('../config.json');
 
 export default function HomePage() {
-  const navigate = useNavigate(); // Initialize navigation hook
+  const navigate = useNavigate();
 
   // State for Star Recipe of the Month
   const [starRecipe, setStarRecipe] = useState(null);
