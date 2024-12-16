@@ -22,7 +22,7 @@ If you would like to explore our original data, feel free to access our ipynb fi
 >npm install (implement this if you first use the application)        
 >npm start
 
-This help you start the backend.      
+This helps you start the backend and connect the database.      
 
 4. Open another terminal, run the following code:
 >cd client     
