@@ -17,14 +17,14 @@ If you would like to explore our original data, feel free to access our ipynb fi
 ## How to use our application
 1. Download the folder /client and /server to the same folder in your machine
 2. Open the folder with /client and /server in VScode
-3. Open one terminal, go to /server, run the following code (make sure you download Node.js before running):
+3. Open one terminal, run the following code (make sure you download Node.js before running):
 >cd server         
 >npm install (implement this if you first use the application)        
 >npm start
 
 This help you start the backend.      
 
-4. Open another terminal, go to /client, run the following code:
+4. Open another terminal, run the following code:
 >cd client     
 >npm install (implement this if you first use the application)        
 >npm start
