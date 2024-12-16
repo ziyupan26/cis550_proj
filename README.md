@@ -12,7 +12,7 @@ Our application, Recipe Finder, is designed to create a user-friendly and access
 ![](https://i.ibb.co/800cVxL/20241215200622.png)
 
 ## Data
-If you would like to explore our original data, feel free to access our ipynb file of downloading and preprocessing data in /data. 
+If you would like to explore our original data, feel free to access our ipynb file of downloading and preprocessing data in `/data`. 
 
 ## How to use our application
 1. Download the folder /client and /server to the same folder in your machine
