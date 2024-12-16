@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Container, Link, Typography, Box, Modal } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import RecipeCard from "../components/RecipeCard";
-import { useNavigate } from "react-router-dom"; // Import the useNavigate hook
+import { useNavigate } from "react-router-dom";
 const config = require("../config.json");
 
 export default function SearchResultsPage() {
@@ -25,7 +25,7 @@ export default function SearchResultsPage() {
         }));
         setRecipesData(recipesWithId);
       });
-  }, []);//[queryParams]
+  }, []);
 
   const handleRowClick = (recipe) => {
     setSelectedRecipe(recipe);
@@ -64,26 +64,26 @@ export default function SearchResultsPage() {
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <Typography
           variant="h4"
-          sx={{
+          sx={{//stylish title
             color: "#FF7043",
-            fontWeight: "bold", // Make the title bold
-            fontSize: "2rem", // Increase font size
-            textAlign: "center", // Center the title
-            flex: 1, // Make the title take up available space
+            fontWeight: "bold",
+            fontSize: "2rem",
+            textAlign: "center",
+            flex: 1,
           }}
         >
           Search Results
         </Typography>
         <button
           onClick={handleClosePage}
-          style={{
+          style={{//close tab
             color: "#FF7043",
             fontWeight: "bold",
             fontSize: "1.2rem",
             border: "none",
             background: "none",
             cursor: "pointer",
-            marginLeft: "auto", // Push the button to the far right
+            marginLeft: "auto",
           }}
         >
           X
@@ -99,7 +99,7 @@ export default function SearchResultsPage() {
           autoHeight
           sx={{
             width: "100%",
-            maxWidth: "800px", // Center-align the grid
+            maxWidth: "800px",
           }}
         />
       </Box>
