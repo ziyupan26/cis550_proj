@@ -15,14 +15,14 @@ Our website is designed to revolutionize the way users explore, discover, and en
 2. Open the folder with /client and /server in VScode
 3. Open one terminal, go to /server, run the following code (make sure you download Node.js before running):
 >cd server         
->npm install        
+>npm install (implement this if you first use the application)        
 >npm start
 
 This help you start the backend.      
 
 4. Open another terminal, go to /client, run the following code:
 >cd client     
->npm install         
+>npm install (implement this if you first use the application)        
 >npm start
 
 It will automatically open the application based on localhost. 
